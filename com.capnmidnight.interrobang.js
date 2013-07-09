@@ -80,8 +80,10 @@ if(!com.capnmidnight.interrobang){
                 }
                 domObject[key] = s;
             }
-        
-            if(domObject.attachEvent !== undefined){
+            if(eventName === "immediate"){
+                convert();
+            }
+            else if(domObject.attachEvent !== undefined){
                 domObject.attachEvent("on" + eventName, convert);
             }
             else{

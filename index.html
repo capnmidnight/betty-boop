@@ -9,11 +9,13 @@
     <script type="text/javascript">
     function init(){
         com.capnmidnight.interrobang(document.getElementById("tb-1"), "keyup");
+        com.capnmidnight.interrobang(document.getElementById("another-block"), "immediate");
     }
     </script>
 </head>
 <body onload="init()">
     <form name="no-form">
+        <div id="another-block">The quick--mostly brown--fox jumped over a "son - of - a - bitch - ass", lazy dog!?</div>
         <textarea id="tb-1" onblur="" rows="10" cols="40" style="font-family:Times New Roman"></textarea>
     </form>
 </body>
