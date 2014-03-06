@@ -1,0 +1,29 @@
+<html>
+<head>
+	<script language="javascript">
+	var oldWidth, oldHeight;
+	function init()
+	{
+		oldWidth = document.body.clientWidth;
+		oldHeight = document.body.clientHeight;
+		run();
+	}
+	function run()
+	{
+		var box = document.getElementById("display");
+		var width = document.body.clientWidth;
+		var height = document.body.clientHeight;
+		if(oldWidth != width || oldHeight != height)
+		{
+			box.innerHTML = "width: "+width+"px<br/>height: "+height+"px<br/>";
+		}
+		oldWidth = width;
+		oldHeight = height;
+		setTimeout("run()", 100);
+	}
+	</script>
+</head>
+<body onload="init()">
+	<div id="display" style="width:300px;height:20px;"></div>
+</body>
+</html>

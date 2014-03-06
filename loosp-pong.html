@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ping Pong</title>
+    <link src="pong.css">
+    <script type="text/loosp">
+        (var PLAY_WIDTH 800)
+        (var PLAY_HEIGHT 400)
+        (var LINE_WIDTH 10)
+        (var PADDLE_LENGTH 100)
+        (var p1 null)
+        (var p2 null)
+        (var ball null)
+        (var timer null)
+        (var lastFrame null)
+        (var startButton null)
+        (var statusBox null)
+        (var state null)
+        (var AI_STEP 5)
+
+        (func (makeRect x y width height bgcolor)
+            (var elem document.createElement("div"))
+            (var s elem.style)
+            (set! s.position "absolute")
+            (set! s.padding "0")
+            (set! s.backgroundColor bgcolor)
+            (set! s.top (+ y "px"))
+            (set! s.left (+ x "px"))
+            (set! s.width (+ width "px"))
+            (set! s.height (+ height "px"))
+            elem)
+
+        (func (Player scoreDisplay x y width height)
+            (set! this.x x)
+            (set! this.y y)
+            (set! this.startY y)
+            (set! this.width width)
+            (set! this.height height)
+            (set! this.score 0)
+            (set! this.scoreDisplay scoreDisplay)
+            (set! this.elem (makeRect this.x this.y this.width this.height "#00ff00"))
+            (var board (document.getElementById "board"))
+            (board.appendChild this.elem))
+
+        (method Player (reset)
+            (this.moveTo this.startY)
+            (set! this.score 0)
+            (set! this.scoreDisplay.innerHTML this.score))
+
+        (method Player (moveTo y)
+            (set! this.y y)
+            (|| (& (> this.y (- PLAY_HEIGHT PADDLE_LENGTH))
+                   (set! this.y (- PLAY_HEIGHT PADDLE_LENGTH)))
+                (& (< this.y 0)
+                   (set! this.y 0)))
+            (set! this.elem.style.top (+ (Math.floor this.y) "px")))
+
+        (method Player (scored)
+            (set! this.score (+ 1 this.score))
+            (set! this.scoreDisplay.innerHTML this.score))
+
+        (method Player (AI ball)
+            (& (> ball.dx 0)
+               (| (& (> ball.y (- (+ this.y this.height) LINE_WIDTH))
+                     (this.moveTo (+ 1 this.y)))
+                  (& (< ball.y this.y)
+                     (this.moveTo (- this.y 1))))))
+
+        (method Player (intersect ball)
+            (& (>= (+ ball.x ball.width) this.x)
+               (< ball.x (+ this.x this.width))
+               (>= (+ ball.y ball.height) this.y)
+               (< ball.y (+ this.y this.height))))
+
+        (method Player (bounce ball)
+            (| (& (this.intersect ball)
+                  (begin
+                    (set! ball.dx (* ball.dx -1.1))
+                    (var dy (- (+ this.y (/ this.height 2)) (+ ball.y (/ ball.height 2)))))
+                    (set! ball.dy (- ball.dy (/ dy 333)))
+                    true))
+                false))
+
+        (func (Ball width height)
+            (set! this.x -1000)
+            (set! this.y 0)
+            (set! this.dx 0)
+            (set! this.dy 0)
+            (set! this.width width)
+            (set! this.height height)
+            (set! this.elem (makeRect this.x this.y this.width this.height "#00ff00"))
+            (var board (document.getElementById "board"))
+            (board.appendChild this.elem))
+
+        (method Ball (drop direction speed)
+            (set! this.x -100)
+            (set! this.y 0)
+            (this.display)
+            (set! this.x (* (- PLAY_WIDTH LINE_WIDTH) 0.5))
+            (set! this.y (* (- PLAY_HEIGHT LINE_WIDTH) 0.5))
+            (var vel (+ 0.2 (* 0.0375 speed)))
+            (var angle (* (- (* (Math.random) 2) 1) Math.PI 0.25))
+            (set! this.dx (* direction (Math.cos angle) vel))
+            (set! this.dy (* (Math.sin angle) vel)))
+
+        (method Ball (display)
+            (set! this.elem.style.top (+ (Math.floor this.y) "px"))
+            (set! this.elem.style.left (+ (Math.floor this.x) "px")))
+
+        (method Ball (advance)
+            (set! this.x (+ this.x this.dx))
+            (set! this.y (+ this.y this.dy)))
+
+        (method Ball (bounced p1 p2 maxY)
+            (& (| (< this.y 0) (>= this.y maxY))
+                  (set! this.dy (* this.dy -1)))
+            (| (p1.bounce this) (p2.bounce this)))
+
+        (window.addEventListener "load" (lambda ()
+            (set! startButton document.getElementById("start"))
+            (set! statusBox document.getElementById("status"))
+            (set! ball new Ball(LINE_WIDTH LINE_WIDTH))
+            (set! p1 (new Player (document.getElementById "score1")
+                                 LINE_WIDTH
+                                 (* (- PLAY_HEIGHT PADDLE_LENGTH) 0.5)
+                                 LINE_WIDTH
+                                 PADDLE_LENGTH))
+            (set! p2 (new Player (document.getElementById "score2")
+                                 LINE_WIDTH
+                                 (* (- PLAY_HEIGHT PADDLE_LENGTH) 0.5)
+                                 LINE_WIDTH
+                                 PADDLE_LENGTH))
+            (document.addEventListener "mousemove" (lambda (evt)
+                (p1.moveTo (- evt.clientY (* PADDLE_LENGTH 0.5)))))))
+
+        (func (prePlay delta)
+            (|  (& (< delta 1000)
+                    (set! statusBox.innerHTML "Ready..."))
+                (& (< delta 2000)
+                    (set! statusBox.innerHTML "Set..."))
+                (& (< delta 3000)
+                    (set! statusBox.innerHTML "GO!")))
+            (var good (>= delta 3000))
+            (& good
+                (begin
+                    (set! statusBox.style.display "none")
+                    (set! state updateGame)))
+            good)
+
+        (func (updateGame delta)
+        {
+            for ((var i 0; i < delta && state == updateGame) ++i)
+            {
+                (ball.advance)
+                if (!ball.bounced(p1 p2 PLAY_HEIGHT - LINE_WIDTH))
+                {
+                    (var scoringPlayer null)
+                    if (ball.x < p1.x)
+                    {
+(set! scoringPlayer p2)
+                    }
+                    else if (ball.x > p2.x)
+                    {
+(set! scoringPlayer p1)
+                    }
+
+                    if (scoringPlayer != null)
+                    {
+                        (scoringPlayer.scored)
+                        ball.drop(scoringPlayer == p1 ? 1 : -1 p1.score + p2.score);
+(set! statusBox.style.display "block")
+                        if (scoringPlayer.score < 5)
+                        {
+(set! state prePlay)
+                        }
+                        else
+                        {
+(set! state gameOver)
+                        }
+                    }
+                }
+            }
+
+            if (state == updateGame)
+            {
+                for ((var i 0; i < delta) i += AI_STEP)
+                {
+                    (p2.AI ball)
+                }
+                (ball.display)
+            }
+
+            return true;
+        }
+
+        (func (gameOver delta)
+        {
+            if (delta < 3000)
+            {
+(set! statusBox.innerHTML "Game Over")
+            }
+            else
+            {
+                (clearInterval timer)
+(set! statusBox.style.display "none")
+(set! startButton.style.display "block")
+                (p1.reset)
+                (p2.reset)
+(set! state titleScreen)
+                return true;
+            }
+            return false;
+        }
+
+        (func (timerTick)
+        {
+            (var currentFrame new Date().getTime())
+            (var delta currentFrame - lastFrame)
+            if (state(delta))
+            {
+(set! lastFrame currentFrame)
+            }
+        }
+
+        (func (start)
+        {
+(set! startButton.style.display "none")
+(set! statusBox.style.display "block")
+(set! lastFrame new Date().getTime())
+            ball.drop(1 0);
+(set! state prePlay)
+(set! timer setInterval(timerTick 33))
+        }
+    </script>
+</head>
+<body>
+    <div id="board">
+        <div id="divider"></div>
+        <div id="score1" class="score">0</div>
+        <div id="score2" class="score">0</div>
+        <div id="status" class="score">Ready</div>
+        <button onclick="start()" id="start">Start</button>
+    </div>
+</body>
+</html>

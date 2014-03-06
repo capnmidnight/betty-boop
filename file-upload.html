@@ -1,0 +1,42 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>file upload test</title>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <script type="text/javascript">
+var f, b, t;
+
+function load(){
+    f = document.getElementById("file-upload");
+    b = document.getElementById("file-upload-button");
+    t = document.getElementById("file-upload-text");
+    b.addEventListener("click", function(){
+        try{
+            f.click();
+        }
+        catch(err){
+            console.log(err);
+        }
+    }, false);
+
+    f.addEventListener("change", function(){
+        console.log(f.value, f);
+        t.innerHTML = Array.prototype
+            .map.call(f.files, function(a){ return "<div>"+a.name+"</div>"; })
+            .reduce(function(a, b){return a + b;});
+    }, false);
+}
+    </script>
+</head>
+
+<body onload="load()">
+    <form>
+<input type="file" id="file-upload" multiple="multiple" style="display:none" >
+<br>
+<button type="button" id="file-upload-button">Browse...</button>
+<span id="file-upload-text"></span>
+    </form>
+</body>
+
+</html>

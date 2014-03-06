@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+	<title>Calculate the dimensions of your fermenter</title>
+	<script type="text/javascript">
+function fin(v)
+{
+	var feet = Math.floor(v);
+	var inch = Math.round((v - feet) * 12);
+	inch = inch + feet * 12;
+	feet = Math.floor(inch / 12);
+	inch = inch % 12;
+	return feet + "' " + inch + "\"";
+}
+function set(name, value)
+{
+	document.getElementById(name).innerHTML = value;
+}
+function calc()
+{
+	var gals = document.getElementById("gallons").value;
+	gals *= 1.3; // head space
+	var cubicFeet = gals * 0.133681;
+	// 8.69 cubic-ft = (diameter/2)^2 * height * PI = (height/2)^2 * height * PI
+	// = height^3/4 * PI
+	var height = Math.round(Math.pow(cubicFeet * 4 / Math.PI, 1/3) * 100) / 100;
+	var surfaceArea = cubicFeet / height;
+	var width = Math.round(Math.sqrt(surfaceArea) * 100) / 100;
+	var headSpace = 3 * cubicFeet / (13 * surfaceArea);
+	set("headSpace", fin(headSpace));
+	set("totalGallons", Math.round(gals * 100) / 100);
+	set("cubicFeet", Math.round(cubicFeet * 100) / 100);
+	set("surfaceArea", Math.round(surfaceArea * 100) / 100);
+	set("dimensions", fin(width) + " x " + fin(width) + " x " + fin(height));
+	var boardFeet = width * (height * 4 + width);
+	set("boardFeet", Math.round(boardFeet*100)/100);
+	set("boardFeet8020", Math.round(boardFeet * 125) / 100);
+}
+</script>
+<body>
+	<form id="form">
+		<input type="text" id="gallons" onchange="calc()">
+		<div>Box with head space: <span id="totalGallons"></span>gal</div>
+		<div>Head space: <span id="headSpace"></span></div>
+		<div>Total box volume: <span id="cubicFeet"></span>ft<sup>3</sup></div>
+		<div>Box top surface area: <span id="surfaceArea"></span>ft<sup>2</sup></div>
+		<div>Box dimensions: <span id="dimensions"></span></div>
+		<div>Board square feet: <span id="boardFeet"></span>ft<sup>2</sup></div>
+		<div>80/20 rule: <span id="boardFeet8020"></span>ft<sup>2</sup></div>
+	</form>
+</body>
+</html>
