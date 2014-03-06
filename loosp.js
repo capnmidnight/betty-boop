@@ -240,7 +240,7 @@ var loosp2js = (function (){
             on: ["sexpr"],
             pattern: /^.+$/,
             translate: function(program, tokens, match){
-                if(tokens.length == 1)
+                if(tokens.length == 1 && tokens[0].match(/^#[^#\s]+\d+#$/))
                     return tokens[0];
                 else{
                     var func = tokens.shift();
