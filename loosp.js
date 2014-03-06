@@ -156,6 +156,18 @@ var loosp2js = (function (){
             }
         },
 
+        whileLoop: {
+            on: ["sexpr"],
+            pattern: /^while\s+\S+(\s+\S+)+$/,
+            translate: function(program, tokens, match){
+                tokens.shift(); // discard "while"
+                var cond = tokens.shift();
+                var body = tokens.join(" ");
+                var script = "while(" + cond + "){" + body + "}";
+                return makeExpr(program, "whileLoop", script);
+            }
+        },
+
         when: {
             on: ["sexpr"],
             pattern: /^when\s+[^\s\(\)]+(\s+[^\s\(\)]+)+$/,
@@ -258,6 +270,14 @@ var loosp2js = (function (){
                 var type = matches[1];
                 var index = matches[2];
                 return program[type][index];
+            }
+        },
+
+        cleanup: {
+            on: ["script"],
+            pattern: /(;;)/,
+            translate: function(program, tokens, match){
+                return ";"
             }
         },
 
