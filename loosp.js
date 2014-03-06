@@ -65,6 +65,15 @@ var loosp2js = (function (){
 
     var grammar = {
 
+        ids:{
+            on: ["script"],
+            pattern: /(\b\S+(-+\S+)+\b)/g,
+            translate: function(program, tokens, match){
+                console.log(match);
+                return match.replace(/-/g, "_");
+            }
+        },
+
         sexpr: {
             on: ["script"],
             pattern: /\(([^\(\)])*\)/g,
@@ -141,18 +150,6 @@ var loosp2js = (function (){
                 tokens.push("return " + tail);
                 var body = tokens.join(" ");
                 return makeExpr(program, "begin", "(function(){" + body + "})();");
-            }
-        },
-
-        forEach: {
-            on: ["sexpr"],
-            pattern: /^for-each\s+\S+\s+\S+$/,
-            translate: function(program, tokens, match){
-                tokens.shift(); // discard "for-each"
-                var arr = tokens.shift();
-                var thunk = tokens.shift();
-                var script = arr + ".forEach(" + thunk + ")";
-                return makeExpr(program, "forEach", script);
             }
         },
 

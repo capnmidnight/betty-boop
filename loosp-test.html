@@ -5,11 +5,13 @@
 <script type="text/javascript" src="loosp.js"></script>
 <script type="text/loosp">
     // a comment
+(define (for-each arr thunk)
+    (arr.map thunk))
 (define (hello name)
     (console.log name)
     "goodbye")
 (define (yell)
-    (alert "HEY!"))
+    (console.log "HEY!"))
 (yell)
 (define x "carl")
 (define y (+ 5 7))
