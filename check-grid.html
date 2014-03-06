@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<head lang="en">
+    <title>chekcbox grid</title>
+    <meta charset="utf-8">
+    <style type="text/css">
+        body{
+            font-family:Arial, Georgia;
+            font-size:10pt;
+        }
+        table{
+            background-color:#e7e7f0;
+            border:solid 0.25em #efefef;
+            text-align:center;
+        }
+        td, th{
+            padding: 0.25em;
+            max-width:100px;
+            width:75px;
+            min-width:50px;
+        }
+        .rowStyle{
+            background-color:#f7f7ff;
+        }
+
+        .rowAltStyle{
+            background-color:#f0f0f7;
+        }
+
+        .yAxisLabel{
+            text-align:right;
+        }
+    </style>
+    <script type="text/javascript">
+    function CheckboxGrid(id, xAxis, yAxis){
+        this.table = document.getElementById(id);
+        this.xAxis = xAxis;
+        this.yAxis = yAxis;
+        this.grid = [];
+        var header = document.createElement("thead");
+        this.table.appendChild(header);
+        var body = document.createElement("tbody");
+        this.table.appendChild(body);
+        for(var y = -1; y < this.yAxis.length; ++y){
+            var row = document.createElement("tr");
+            if(y == -1){
+                row.className = "xAxisLabel";
+                header.appendChild(row);
+            }
+            else{
+                row.className += y % 2 == 0 ? "rowStyle" : "rowAltStyle";
+                body.appendChild(row);
+            }
+            this.grid.push([]);
+            for(var x = -1; x < this.xAxis.length; ++x){
+                var cell = document.createElement(y==-1?"th":"td");
+                if(x == -1 && y > -1)
+                    cell.className = "yAxisLabel";
+                else
+                    cell.className = x % 2 == 0 ? "colStyle" : "colAltStyle";
+                row.appendChild(cell);
+                if(y == -1 && x > -1){
+                    cell.innerHTML = xAxis[x];
+                    cell.className = "rotate";
+                }
+                else if(x == -1 && y > -1){
+                    cell.innerHTML = yAxis[y];
+                }
+                else if(x > -1 && y > -1){
+                    var check = document.createElement("input");
+                    check.type = "checkbox";
+                    check.id = "check" + x + "_" + y;
+                    check.x = x;
+                    check.y = y;
+                    check.grid = this;
+                    check.addEventListener("click", function(){
+                        console.log(this.grid.xAxis[this.x], this.grid.yAxis[this.y], this.checked);
+                    });
+                    cell.appendChild(check);
+                    this.grid[y].push(check);
+                }
+            }
+        }
+    }
+
+    CheckboxGrid.prototype.setGrid = function setGrid(obj){
+        for(var role in obj){
+            var x = this.xAxis.indexOf(role);
+            for(var i = 0; i < obj[role].length; ++i){
+                var y = this.yAxis.indexOf(obj[role][i]);
+                this.grid[y][x].checked = true;
+            }
+        }
+    }
+
+    CheckboxGrid.prototype.getGrid = function getGrid(){
+        var obj = {};
+        for(var y = 0; y < this.grid.length; ++y){
+            for(var x = 0; x < this.grid[y].length; ++x){
+                if(this.grid[y][x].checked){
+                    if(!obj[this.xAxis[x]])
+                        obj[this.xAxis[x]] = [];
+                    obj[this.xAxis[x]].push(this.yAxis[y]);
+                }
+            }
+        }
+        return obj;
+    }
+
+    function init(){
+        var xAxis = ["users", "admin", "beta", "alabama", "texas", "new jersey"];
+        var yAxis = ["file1.csv", "file2.csv", "file3.csv", "file4.csv",
+        "file5.csv", "file6.csv", "file7.csv", "file8.csv", "file9.csv",
+        "file10.csv", "file11.csv", "file12.csv", "file13.csv",
+        "file14.csv", "file15.csv"];
+        var grid = new CheckboxGrid("check-grid", xAxis, yAxis);
+
+        grid.setGrid({
+            users: ["file1.csv", "file3.csv", "file15.csv"],
+            alabama: ["file14.csv", "file10.csv"]
+        });
+    }
+    </script>
+</head>
+<body onload="init()">
+    <form name="no-form">
+        <table id="check-grid" cellpadding=0 cellspacing=0></table>
+    </form>
+</body>
