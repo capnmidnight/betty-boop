@@ -11,31 +11,30 @@
         (define PLAY_HEIGHT 400)
         (define LINE_WIDTH 10)
         (define PADDLE_LENGTH 100)
+        (define AI_STEP 5)
+        (define canv (document.getElementById "board"))
+        (set! canv.width PLAY_WIDTH)
+        (set! canv.height PLAY_HEIGHT)
+        (set! canv.style.width (+ PLAY_WIDTH "px"))
+        (set! canv.style.height (+ PLAY_HEIGHT "px"))
+        (define g (canv.getContext "2d"))
+        (define startButton (document.getElementById "start"))
+        (define statusBox (document.getElementById "status"))
         (define p1 null)
         (define p2 null)
         (define ball null)
         (define timer null)
         (define lastFrame null)
-        (define startButton null)
-        (define statusBox null)
         (define state null)
-        (define AI_STEP 5)
 
         (class (Rect x y width height)
-            (define board (document.getElementById "board"))
             (set! this.x x)
             (set! this.y y)
             (set! this.width width)
             (set! this.height height)
-            (set! this.elem (document.createElement "div"))
-            (board.appendChild this.elem)
-            (set! this.elem.style.position "absolute")
-            (set! this.elem.style.padding "0")
-            (set! this.elem.style.backgroundColor "#00ff00")
-            (set! this.elem.style.top (+ this.y "px"))
-            (set! this.elem.style.left (+ this.x "px"))
-            (set! this.elem.style.width (+ this.width "px"))
-            (set! this.elem.style.height (+ this.height "px")))
+
+            (method (draw)
+                (g.fillRect this.x this.y this.width this.height)))
 
         (class (Player:Rect scoreDisplay x y width height)
             (base x y width height)
@@ -54,8 +53,7 @@
                 (if (> this.y (- PLAY_HEIGHT PADDLE_LENGTH))
                     (set! this.y (- PLAY_HEIGHT PADDLE_LENGTH))
                     (when (< this.y 0)
-                        (set! this.y 0)))
-                (set! this.elem.style.top (+ (Math.floor this.y) "px")))
+                        (set! this.y 0))))
 
             (method (scored)
                 (set! this.score (+ 1 this.score))
@@ -92,17 +90,12 @@
             (method (drop direction speed)
                 (set! this.x -100)
                 (set! this.y 0)
-                (this.display)
                 (set! this.x (* 0.5 (- PLAY_WIDTH LINE_WIDTH)))
                 (set! this.y (* 0.5 (- PLAY_HEIGHT LINE_WIDTH)))
                 (define vel (+ 0.2 (* 0.0375 speed)))
                 (define angle (* (- (* (Math.random) 2) 1) Math.PI 0.25))
                 (set! this.dx (* direction (Math.cos angle) vel))
                 (set! this.dy (* (Math.sin angle) vel)))
-
-            (method (display)
-                (set! this.elem.style.top (+ (Math.floor this.y) "px"))
-                (set! this.elem.style.left (+ (Math.floor this.x) "px")))
 
             (method (advance)
                 (set! this.x (+ this.x this.dx))
@@ -147,14 +140,17 @@
                             (set! state prePlay)
                             (set! state gameOver))))
                 (set! i (+ 1 i)))
-
-            (when (= state updateGame)
-                (set! i 0)
-                (while (< i delta)
-                    (p2.AI ball)
-                    (set! i (+ i AI_STEP)))
-                (ball.display)
-            true))
+            (set! i 0)
+            (while (< i delta)
+                (p2.AI ball)
+                (set! i (+ i AI_STEP)))
+            (set! g.fillStyle "#000000")
+            (g.fillRect 0 0 PLAY_WIDTH PLAY_HEIGHT)
+            (set! g.fillStyle "#00FF00")
+            (ball.draw)
+            (p1.draw)
+            (p2.draw)
+            true)
 
         (define (gameOver delta)
             (define ret false)
@@ -166,7 +162,7 @@
                     (set! startButton.style.display "block")
                     (p1.reset)
                     (p2.reset)
-                    (set! state titleScreen)
+                    (set! state prePlay)
                     (set! ret true)))
             ret)
 
@@ -184,9 +180,7 @@
             (set! state prePlay)
             (set! timer (setInterval timerTick 33)))
 
-        (set! startButton (document.getElementById "start"))
         (startButton.addEventListener "click" start)
-        (set! statusBox (document.getElementById "status"))
         (set! ball (new Ball LINE_WIDTH LINE_WIDTH))
         (set! p1 (new Player (document.getElementById "score1")
                              LINE_WIDTH
@@ -204,13 +198,12 @@
 </head>
 <body onload="loosp2js()">
     <form>
-        <div id="board">
-            <div id="divider"></div>
-            <div id="score1" class="score">0</div>
-            <div id="score2" class="score">0</div>
-            <div id="status" class="score">Ready</div>
-            <button type="button" id="start">Start</button>
-        </div>
+        <div id="score1" class="score">0</div>
+        <div id="score2" class="score">0</div>
+        <canvas id="board"></canvas>
+        <div id="divider"></div>
+        <div id="status" class="score">Ready</div>
+        <button type="button" id="start">Click here to start...</button>
     </form>
 </body>
 </html>

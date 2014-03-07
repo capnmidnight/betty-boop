@@ -51,8 +51,6 @@
         {
             top: 0px;
             left: 0px;
-            width: 800px;
-            height: 400px;
             border-top: solid 10px #00ff00;
             border-bottom: solid 10px #00ff00;
             background-color: #000000;
@@ -65,7 +63,7 @@
             top: 0px;
             left: 395px;
             width: 10px;
-            height: 400px;
+            height: 410px;
         }
 
         /* This is kind of cheap, but sometimes you just want something
@@ -76,9 +74,13 @@
         {
             position: absolute;
             top: 175px;
-            left: 300px;
-            width: 200px;
-            height: 50px;
+            left: 230px;
+            padding:1em;
+            margin:0 auto 0 auto;
+            background-color: #000000;
+            border:solid 3px #00ff00;
+            color: #00ff00;
+            font-size:24pt;
         }
 
         /* Never forget that you need to give quite a bit of feedback
@@ -91,6 +93,6 @@
             width: 600px;
             padding: 10px;
             text-align: center;
-            background-color: black;
+            background-color: #000000;
             display: none;
         }
