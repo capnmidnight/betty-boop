@@ -86,6 +86,33 @@ var loosp2js = (function () {
             errorMessage: "unterminated block comment"
         },
 
+        literal: {
+            on: "script",
+            pattern: /("[^"]*"|\b\d+\.\d+\b|\b\d+\b)/g,
+            translate: function (program, tokens, match) {
+                if(match[0] == "\"")
+                    match = match.replace(/\n/g, "\\n\"\n+\"");
+                return makeExpr(program, "literal", match);
+            },
+            validate: /("[^"]*\n)/g,
+            errorMessage: "unterminated string constant"
+        },
+
+        array: {
+            on: "script",
+            pattern: /\[([^\[\]]*)\]/g,
+            translate: function (program, tokens, match) {
+                return makeExpr(program, "array",
+                    "[" + match.substring(1, match.length - 1)
+                        .split(/\s+/)
+                        .map(function(s){return s.trim();})
+                        .filter(function (s){return s.length > 0;})
+                        .join(",") + "]");
+            },
+            validate: /(\[|\])/g,
+            errorMessage: "unterminated array literal"
+        },
+
         sexpr: {
             on: "script",
             pattern: /\(([^\(\)])*\)/g,
@@ -95,18 +122,6 @@ var loosp2js = (function () {
             },
             validate: /(\(|\))/g,
             errorMessage: "un-matched parenthesis"
-        },
-
-        literal: {
-            on: "sexpr",
-            pattern: /("[^"\n]*"|\@"[^"]*"|\b\d+\.\d+\b|\b\d+\b)/g,
-            translate: function (program, tokens, match) {
-                if(match[0] == "@")
-                    match = match.substring(1).replace(/\n/g, "\\n\"\n+\"");
-                return makeExpr(program, "literal", match);
-            },
-            validate: /("[^"]*\n)/g,
-            errorMessage: "unterminated string constant"
         },
 
         idsA: {
@@ -122,15 +137,6 @@ var loosp2js = (function () {
             pattern: /\?/g,
             translate: function (program, tokens, match) {
                 return match.replace(/\?/g, "Que");
-            }
-        },
-
-        array: {
-            on: "sexpr",
-            pattern: /\[(\S+(\s+\S+)*)*\]/,
-            translate: function (program, tokens, match) {
-                return makeExpr(program, "array",
-                    match.split(/\s+/).join(","));
             }
         },
 

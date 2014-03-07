@@ -8,7 +8,7 @@
 (define (log)
     (console.log.apply console arguments))
 
-(log @"the quick brown
+(log "the quick brown
     fox jumps over
     the lazy dog.")
 (class (Shape width height)
@@ -16,7 +16,7 @@
     (set! this.height height)
     (method (describe)
         (log (this.getType)
-             @"Area:"
+             "Area:"
             (* this.width this.height))))
 
 (class (Square:Shape size)
@@ -41,10 +41,9 @@
         (set! output[name] value))
     output)
 
-(log {"a":[1 2 3]
-    "b":4
-    "c":"asdf"
-    "d":{"e":5 "f":[6 7 8]}})
+(log [ [ 1 2 3 ]
+       [ 4 5 6 ]
+       [ 7 8 9 ] ])
 </script>
 </head>
 <body onload="loosp2js(true)">
