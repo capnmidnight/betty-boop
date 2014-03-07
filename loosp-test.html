@@ -7,6 +7,7 @@
     // a comment
 (define (log)
     (console.log.apply console arguments))
+
 (log @"the quick brown
     fox jumps over
     the lazy dog.")
@@ -32,6 +33,18 @@
 
 (f "a" "b" "c" 2 3 4 5)
 
+(define (obj parts...)
+    (define output {})
+    (while (> parts.length 0)
+        (define name (parts.shift))
+        (define value (parts.shift))
+        (set! output[name] value))
+    output)
+
+(log {"a":[1 2 3]
+    "b":4
+    "c":"asdf"
+    "d":{"e":5 "f":[6 7 8]}})
 </script>
 </head>
 <body onload="loosp2js(true)">

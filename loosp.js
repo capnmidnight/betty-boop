@@ -405,7 +405,7 @@ var loosp2js = (function () {
             if(matches){
                 args.pop();
                 var argName = matches[1];
-                super1 += "var " + argName + " = Array.prototype.slice.call(arguments);\n c.splice(0, " + args.length + ");\n";
+                super1 += "var " + argName + " = Array.prototype.slice.call(arguments);\n " + argName + ".splice(0, " + args.length + ");\n";
             }
         }
 
