@@ -55,12 +55,7 @@
                     (set! this.y (- PLAY_HEIGHT PADDLE_LENGTH))
                     (when (< this.y 0)
                         (set! this.y 0)))
-                (set! this.elem.style.top (+ (Math.floor this.y) "px"))))
-
-        (define ppp (new Player (document.getElementById "score1") 25 44 10 10))
-        (console.log "%0 %s" ppp (ppp.reset))
-        //(console.log "%0 %s" ppp (send ppp reset))
-/*
+                (set! this.elem.style.top (+ (Math.floor this.y) "px")))
 
             (method (scored)
                 (set! this.score (+ 1 this.score))
@@ -87,6 +82,7 @@
                     (set! ball.dy (- ball.dy (* dy 0.003003003003003003003003003003)))
                     (set! good true))
                 good))
+
 
         (class (Ball:Rect width height)
             (base -1000 0 width height)
@@ -117,7 +113,8 @@
                 (when (or (< this.y 0) (>= this.y maxY))
                     (set! this.dy (* this.dy -1))
                     (set! good true))
-                (set! good (or good (p1.bounce this) (p2.bounce this)))))
+                (set! good (or good (p1.bounce this) (p2.bounce this)))
+                good))
 
         (define (prePlay delta)
             (if (< delta 1000)
@@ -133,20 +130,19 @@
 
         (define (updateGame delta)
             (define i 0)
+            (define scoringPlayer null)
             (while (and (< i delta) (= state updateGame))
                 (ball.advance)
                 (when (not (ball.bounced p1 p2 (- PLAY_HEIGHT LINE_WIDTH)))
-                    (define scoringPlayer null)
                     (if (< ball.x p1.x)
                         (set! scoringPlayer p2)
                         (when (> ball.x p2.x)
                             (set! scoringPlayer p1)))
 
-                    (if (not (= scoringPlayer null))
-                        (begin
-                            (scoringPlayer.scored)
-                            (ball.drop (or (and (= scoringPlayer p1) 1) -1) (+ p1.score p2.score))
-                            (set! statusBox.style.display "block"))
+                    (when (!= scoringPlayer null)
+                        (scoringPlayer.scored)
+                        (ball.drop (or (and (= scoringPlayer p1) 1) -1) (+ p1.score p2.score))
+                        (set! statusBox.style.display "block")
                         (if (< scoringPlayer.score 5)
                             (set! state prePlay)
                             (set! state gameOver))))
@@ -158,7 +154,7 @@
                     (p2.AI ball)
                     (set! i (+ i AI_STEP)))
                 (ball.display)
-            true)
+            true))
 
         (define (gameOver delta)
             (define ret false)
@@ -191,22 +187,22 @@
         (set! startButton (document.getElementById "start"))
         (startButton.addEventListener "click" start)
         (set! statusBox (document.getElementById "status"))
-        (set! ball (new Ball(LINE_WIDTH LINE_WIDTH)))
+        (set! ball (new Ball LINE_WIDTH LINE_WIDTH))
         (set! p1 (new Player (document.getElementById "score1")
                              LINE_WIDTH
                              (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH))
                              LINE_WIDTH
                              PADDLE_LENGTH))
         (set! p2 (new Player (document.getElementById "score2")
-                             LINE_WIDTH
+                             (- PLAY_WIDTH (* 2 LINE_WIDTH))
                              (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH))
                              LINE_WIDTH
                              PADDLE_LENGTH))
         (document.addEventListener "mousemove" (lambda (evt)
-            (p1.moveTo (- evt.clientY (* 0.5 PADDLE_LENGTH))))))*/
+            (p1.moveTo (- evt.clientY (* 0.5 PADDLE_LENGTH)))))
     </script>
 </head>
-<body onload="loosp2js(true)">
+<body onload="loosp2js()">
     <form>
         <div id="board">
             <div id="divider"></div>

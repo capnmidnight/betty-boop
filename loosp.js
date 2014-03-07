@@ -194,7 +194,7 @@ var loosp2js = (function () {
                 var tail = tokens.pop();
                 tokens.push("return " + tail);
                 var body = tokens.join("; ");
-                return makeExpr(program, "begin", "(function(){" + body + ";})()");
+                return makeExpr(program, "begin", "(function(){" + body + ";}).call(this)");
             }
         },
 
@@ -219,7 +219,7 @@ var loosp2js = (function () {
                 var tail = tokens.pop();
                 tokens.push("_ret = " + tail);
                 var body = tokens.join("; ");
-                return makeExpr(program, "when", "(function(){var _ret; if(" + expr + "){" + body + ";} return _ret;})()");
+                return makeExpr(program, "when", "(function(){var _ret; if(" + expr + "){" + body + ";} return _ret;}).call(this)");
             }
         },
 
@@ -231,7 +231,7 @@ var loosp2js = (function () {
                 var expr = tokens.shift();
                 var yes = tokens.shift();
                 var no = tokens.shift();
-                return makeExpr(program, "ifBlock", "(function(){var _ret; if(" + expr + "){_ret = " + yes + ";}else{_ret = " + no + ";} return _ret;})()");
+                return makeExpr(program, "ifBlock", "(function(){var _ret; if(" + expr + "){_ret = " + yes + ";}else{_ret = " + no + ";} return _ret;}).call(this)");
             }
         },
 
@@ -244,7 +244,7 @@ var loosp2js = (function () {
                 var tail = tokens.pop();
                 tokens.push("_ret = " + tail);
                 var body = tokens.join("; ");
-                return makeExpr(program, "unless", "(function(){var _ret; if(!" + expr + "){" + body + ";} return _ret;})()");
+                return makeExpr(program, "unless", "(function(){var _ret; if(!" + expr + "){" + body + ";} return _ret;}).call(this)");
             }
         },
 
@@ -304,8 +304,6 @@ var loosp2js = (function () {
             on: "sexpr",
             pattern: /^(\s*\S+)+$/g,
             translate: function (program, tokens, match) {
-                if (tokens[0].indexOf("\n") > 0)
-                    console.log(tokens);
                 if (tokens.length == 1 && tokens[0].match(/^#[^#\s]+\d+#$/))
                     return tokens[0];
                 else {
@@ -353,28 +351,40 @@ var loosp2js = (function () {
             if (tail)
                 tokens.push("return " + tail);
         }
-        else if (name != "LoospObject") {
-            if (name.indexOf(":") > -1) {
-                var parts = name.split(":");
-                name = parts.shift();
-                super1 = parts.shift();
+        else{
+            if (name != "LoospObject") {
+                if (name.indexOf(":") > -1) {
+                    var parts = name.split(":");
+                    name = parts.shift();
+                    super1 = parts.shift();
+                }
+                else {
+                    super1 = "LoospObject";
+                }
+                super2 = name + ".prototype = Object.create(" + super1 + ".prototype);";
+                if (super1 == "LoospObject") {
+                    super1 = "LoospObject.call(this);";
+                    super1 += " this.typeChain.unshift(\"" + name + "\");";
+                }
+                else {
+                    super1 = "var base = function(){" + super1 + ".apply(this, Array.prototype.slice.call(arguments));";
+                    super1 += " this.typeChain.unshift(\"" + name + "\");}.bind(this);";
+                }
             }
-            else {
-                super1 = "LoospObject";
-            }
-            super2 = name + ".prototype = Object.create(" + super1 + ".prototype);";
-            if (super1 == "LoospObject") {
-                super1 = "LoospObject.call(this);";
-                super1 += " this.typeChain.unshift(\"" + name + "\");";
-            }
-            else {
-                super1 = "var base = function(){" + super1 + ".apply(this, Array.prototype.slice.call(arguments));";
-                super1 += " this.typeChain.unshift(\"" + name + "\");}.bind(this);";
-            }
+            var exprs = [], methods = [];
+            tokens.forEach(function(exprID){
+                var expr = postProcess.compile.translate(program, null, exprID);
+                if(expr.search(/^method /) > -1)
+                    methods.push(name + "." + exprID);
+                else
+                    exprs.push(exprID);
+            });
+            tokens = exprs;
+            super2 += methods.join("; ") +"; ";
         }
         var prefix = "";
         if (type == "method")
-            prefix = "if(!this.__proto__." + name + ") this.__proto__." + name + " = ";
+            prefix = "prototype." + name + " = ";
         return makeExpr(program, type,
             prefix + "function " + name
                 + "(" + args.join(",") + "){"
