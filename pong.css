@@ -18,32 +18,6 @@
             padding: 0;
             background-color: #00ff00;
         }
-
-        /* There are two different score indicators, so the
-   rule that affects their font appearance will be
-   applied as a class. */
-        .score
-        {
-            top: 30px;
-            color: #00ff00;
-            background-color: transparent;
-            font-family: fixedsys, Courier, "Courier New" , fixed;
-            font-weight: bold;
-            font-size: 36pt;
-        }
-
-        /* and then the individual score counters are positioned
-   seperately */
-        #score1
-        {
-            left: 325px;
-        }
-
-        #score2
-        {
-            left: 445px;
-        }
-
         /* This is kind of the "background" of the game, as well
    as a container that can be used to reposition it
    essentially anywhere. */
@@ -84,7 +58,7 @@
         }
 
         /* Never forget that you need to give quite a bit of feedback
-   to the user. This setups the block of text that will tell
+   to the user. This sets up the block of text that will tell
    the user what is going on. */
         #status
         {
@@ -95,4 +69,8 @@
             text-align: center;
             background-color: #000000;
             display: none;
+            color: #00ff00;
+            font-family: fixedsys, Courier, "Courier New" , fixed;
+            font-weight: bold;
+            font-size: 36pt;
         }

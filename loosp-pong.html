@@ -5,24 +5,27 @@
     <title>Ping Pong</title>
     <link type="text/css" rel="stylesheet" href="pong.css">
     <script type="text/javascript" src="loosp.js"></script>
-    <script type="text/javascript" src="pon.js"></script>
     <script type="text/loosp">
         (define PLAY_WIDTH 800)
         (define PLAY_HEIGHT 400)
         (define LINE_WIDTH 10)
         (define PADDLE_LENGTH 100)
         (define AI_STEP 5)
+
+        (define startButton (document.getElementById "start"))
+        (define statusBox (document.getElementById "status"))
         (define canv (document.getElementById "board"))
         (set! canv.width PLAY_WIDTH)
         (set! canv.height PLAY_HEIGHT)
         (set! canv.style.width (+ PLAY_WIDTH "px"))
         (set! canv.style.height (+ PLAY_HEIGHT "px"))
         (define g (canv.getContext "2d"))
-        (define startButton (document.getElementById "start"))
-        (define statusBox (document.getElementById "status"))
+        (set! g.font "36pt Courier")
+
         (define p1 null)
         (define p2 null)
         (define ball null)
+        (define divider null)
         (define timer null)
         (define lastFrame null)
         (define state null)
@@ -32,20 +35,20 @@
             (set! this.y y)
             (set! this.width width)
             (set! this.height height)
+            (set! this.lastX this.x)
+            (set! this.lastY this.x)
 
             (method (draw)
                 (g.fillRect this.x this.y this.width this.height)))
 
-        (class (Player:Rect scoreDisplay x y width height)
+        (class (Player:Rect x y width height)
             (base x y width height)
             (set! this.startY y)
             (set! this.score 0)
-            (set! this.scoreDisplay scoreDisplay)
 
             (method (reset)
                 (this.moveTo this.startY)
                 (set! this.score 0)
-                (set! this.scoreDisplay.innerHTML this.score)
                 "Ok!")
 
             (method (moveTo y)
@@ -56,8 +59,7 @@
                         (set! this.y 0))))
 
             (method (scored)
-                (set! this.score (+ 1 this.score))
-                (set! this.scoreDisplay.innerHTML this.score))
+                (set! this.score (+ 1 this.score)))
 
             (method (AI ball)
                 (when (> ball.dx 0)
@@ -144,12 +146,6 @@
             (while (< i delta)
                 (p2.AI ball)
                 (set! i (+ i AI_STEP)))
-            (set! g.fillStyle "#000000")
-            (g.fillRect 0 0 PLAY_WIDTH PLAY_HEIGHT)
-            (set! g.fillStyle "#00FF00")
-            (ball.draw)
-            (p1.draw)
-            (p2.draw)
             true)
 
         (define (gameOver delta)
@@ -170,7 +166,20 @@
             (define currentFrame ((new Date).getTime))
             (define delta (- currentFrame lastFrame))
             (when (state delta)
-                (set! lastFrame currentFrame)))
+                (set! lastFrame currentFrame))
+
+            (set! g.fillStyle "rgba(0, 0, 0, 0.333)")
+            (g.fillRect 0 0 PLAY_WIDTH PLAY_HEIGHT)
+            (define img (new Image))
+            (set! img.src (canv.toDataURL))
+            (g.drawImage img -3 -3 (+ 6 PLAY_WIDTH) (+ 6 PLAY_HEIGHT))
+            (set! g.fillStyle "#00ff00")
+            (divider.draw)
+            (ball.draw)
+            (p1.draw)
+            (p2.draw)
+            (g.fillText p1.score (* 0.5 (- PLAY_WIDTH 100)) (* 5 LINE_WIDTH))
+            (g.fillText p2.score (* 0.5 (+ PLAY_WIDTH 35)) (* 5 LINE_WIDTH)))
 
         (define (start)
             (set! startButton.style.display "none")
@@ -182,26 +191,23 @@
 
         (startButton.addEventListener "click" start)
         (set! ball (new Ball LINE_WIDTH LINE_WIDTH))
-        (set! p1 (new Player (document.getElementById "score1")
-                             LINE_WIDTH
+        (set! p1 (new Player LINE_WIDTH
                              (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH))
                              LINE_WIDTH
                              PADDLE_LENGTH))
-        (set! p2 (new Player (document.getElementById "score2")
-                             (- PLAY_WIDTH (* 2 LINE_WIDTH))
+        (set! p2 (new Player (- PLAY_WIDTH (* 2 LINE_WIDTH))
                              (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH))
                              LINE_WIDTH
                              PADDLE_LENGTH))
+        (set! divider (new Rect (* 0.5 (- PLAY_WIDTH LINE_WIDTH)) 0 LINE_WIDTH PLAY_HEIGHT))
+
         (document.addEventListener "mousemove" (lambda (evt)
             (p1.moveTo (- evt.clientY (* 0.5 PADDLE_LENGTH)))))
     </script>
 </head>
 <body onload="loosp2js()">
     <form>
-        <div id="score1" class="score">0</div>
-        <div id="score2" class="score">0</div>
         <canvas id="board"></canvas>
-        <div id="divider"></div>
         <div id="status" class="score">Ready</div>
         <button type="button" id="start">Click here to start...</button>
     </form>
