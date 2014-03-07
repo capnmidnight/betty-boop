@@ -1,12 +1,12 @@
-var loosp2js = (function (){
+var loosp2js = (function () {
     "use strict";
-    function loosp2js(script){
-        if(script){
+    function loosp2js(script) {
+        if (script) {
             return translate(script);
         }
-        else{
+        else {
             var arr = document.querySelectorAll("script[type='text/loosp']");
-            for(var i = 0; i < arr.length; ++i){
+            for (var i = 0; i < arr.length; ++i) {
                 var script = arr[i].innerHTML;
                 script = loosp2js(script);
                 console.log(script);
@@ -15,229 +15,249 @@ var loosp2js = (function (){
         }
     }
 
-    function translate(script){
-        script = script.trim();
-        var program = {script:[script]}, trans = [];
-        for(var formName in grammar)
+    function translate(script) {
+        var formName,
+            program = { script: ["(class (LoospObject) (set! this.typeChain [\"LoospObject\"]) (method (getType) this.typeChain[0]))\n " + script.trim()] };
+        for (var formName in grammar)
             program[formName] = [];
-        for(var formName in grammar)
-            processForm(program, formName, trans);
-        var exprCount = 0;
-        for(var form in program)
-            exprCount += program[form].length;
-        console.log("Expressions:", exprCount, program);
+        for (var formName in grammar)
+            processForm(program, grammar[formName]);
+        for (var formName in postProcess)
+            processForm(program, postProcess[formName]);
         return program.script[0];
     }
 
-    function processForm(program, formName, trans){
-        var form = grammar[formName], expr, matches;
-        for(var j = 0; j < form.on.length; ++j){
-            var item = form.on[j];
-            for(var i = 0, l = program[item].length; i < l; ++i){
-                expr = program[item][i];
-                do{
-                    program[item][i] = expr;
-                    matches = expr.match(form.pattern);
-                    if(matches){
-                        var tokens = expr.split(/\s+/);
-                        var expr2 = expr.replace(
-                            form.pattern,
-                            form.translate.bind(form, program, tokens));
-                        if(expr2 != expr){
-                            expr = expr2
-                            trans[i] = true;
-                        }
-                    }
-                }while(expr != program[item][i])
-            }
+    function processForm(program, form) {
+        var expr, matches, tokens, expr2;
+        for (var i = 0, l = program[form.on].length; i < l; ++i) {
+            expr = program[form.on][i];
+            do {
+                program[form.on][i] = expr;
+                matches = expr.match(form.pattern);
+                if (matches) {
+                    tokens = expr.split(/\s+/);
+                    expr2 = expr.replace(
+                        form.pattern,
+                        form.translate.bind(form, program, tokens));
+                    if (expr2 != expr)
+                        expr = expr2
+                }
+            } while (expr != program[form.on][i])
         }
     }
 
-    function makeExpr(program, type, script){
+    function makeExpr(program, type, script) {
         var i = program[type].indexOf(script);
-        if(i == -1){
+        if (i == -1) {
             i = program[type].length;
             program[type].push(script);
         }
-        var name = "#" + type + i + "#";
-        return name;
+        return "#" + type + i + "#";
     }
 
     var grammar = {
 
-        ids:{
-            on: ["script"],
-            pattern: /(\b\S+(-+\S+)+\b)/g,
-            translate: function(program, tokens, match){
-                console.log(match);
-                return match.replace(/-/g, "_");
-            }
-        },
-
         sexpr: {
-            on: ["script"],
+            on: "script",
             pattern: /\(([^\(\)])*\)/g,
-            translate: function(program, tokens, match){
+            translate: function (program, tokens, match) {
                 return makeExpr(program, "sexpr",
                     match.replace(/(\(|\))/g, ""));
             }
         },
 
         literal: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /"([^"]*"|\b\d+\.\d+\b|\b\d+\b)/g,
-            translate: function(program, token, match){
-                return makeExpr(program, "literal",
-                    match);
+            translate: function (program, tokens, match) {
+                return makeExpr(program, "literal", match);
             }
         },
 
-        array:{
-            on: ["sexpr"],
-            pattern:/\[(\S+(\s+\S+)*)\]/,
-            translate: function(program, tokens, match){
+        idsA: {
+            on: "sexpr",
+            pattern: /(\b\S+(-+\S*)+\b)/g,
+            translate: function (program, tokens, match) {
+                return match.replace(/-/g, "_");
+            }
+        },
+
+        idsB: {
+            on: "sexpr",
+            pattern: /\?/g,
+            translate: function (program, tokens, match) {
+                return match.replace(/\?/g, "Que");
+            }
+        },
+
+        array: {
+            on: "sexpr",
+            pattern: /\[(\S+(\s+\S+)*)*\]/,
+            translate: function (program, tokens, match) {
                 return makeExpr(program, "array",
                     match.split(/\s+/).join(","));
             }
         },
 
         operatorsA: {
-            on: ["sexpr"],
-            pattern: /^([+\-%^*\/><])(\s+\S+){2,}$/,
-            translate: function(program, tokens, match){
+            on: "sexpr",
+            pattern: /^([+\-%^*\/><]|instanceof|>=|<=|!=)(\s+\S+){2,}$/,
+            translate: function (program, tokens, match) {
                 var op = tokens.shift();
                 return makeExpr(program, "operatorsA",
-                    "(" + tokens.join(op) + ")");
+                    "(" + tokens.join(" " + op + " ") + ")");
             }
         },
 
         operatorsB: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^(and|or|=)(\s+\S+){2,}$/,
-            translate: function(program, tokens, match){
+            translate: function (program, tokens, match) {
                 var op = tokens.shift();
-                if(op == "and") op = "&";
-                else if(op == "or") op = "|";
+                if (op == "and") op = "&";
+                else if (op == "or") op = "|";
                 return makeExpr(program, "operatorsB",
                     "(" + tokens.join(op + op) + ")");
             }
         },
 
+        operatorsC: {
+            on: "sexpr",
+            pattern: /^(not|-|~)\s+\S+$/,
+            translate: function (program, tokens, match) {
+                var op = tokens.shift();
+                if (op == "not") op = "!";
+                var expr = tokens.shift();
+                return makeExpr(program, "operatorsC",
+                    op + "(" + expr + ")");
+            }
+        },
+
         func: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^define\s+(#sexpr\d+#)((?:\s+[^\s\(\)]+)+)$/,
             translate: makeFunction.bind(this, "func")
         },
 
-//this needs to come after func, as it is a more generalized pattern
-// and can break function definitions if it came first. Alternately,
-// we could change the 'define' keyword for functions.
+        //this needs to come after func, as it is a more generalized pattern
+        // and can break function definitions if it came first. Alternately,
+        // we could change the 'define' keyword for functions.
         variable: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^define(\s+[^\s\(\)]+){2}$/,
-            translate: function(program, tokens, match){
+            translate: function (program, tokens, match) {
                 tokens.shift(); //discard "define"
                 return makeExpr(program, "variable", "var " + tokens.shift() + " = " + tokens.shift() + ";");
             }
         },
 
         begin: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^begin(\s+[^\s\(\)]+)+$/,
-            translate: function(program, tokens, match){
+            translate: function (program, tokens, match) {
                 tokens.shift(); // discard "for-each"
                 var tail = tokens.pop();
                 tokens.push("return " + tail);
-                var body = tokens.join(" ");
-                return makeExpr(program, "begin", "(function(){" + body + "})();");
+                var body = tokens.join("; ");
+                return makeExpr(program, "begin", "(function(){" + body + ";})()");
             }
         },
 
         whileLoop: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^while\s+\S+(\s+\S+)+$/,
-            translate: function(program, tokens, match){
+            translate: function (program, tokens, match) {
                 tokens.shift(); // discard "while"
                 var cond = tokens.shift();
-                var body = tokens.join(" ");
-                var script = "while(" + cond + "){" + body + "}";
+                var body = tokens.join("; ");
+                var script = "while(" + cond + "){" + body + ";}";
                 return makeExpr(program, "whileLoop", script);
             }
         },
 
         when: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^when\s+[^\s\(\)]+(\s+[^\s\(\)]+)+$/,
-            translate: function(program, tokens, match){
+            translate: function (program, tokens, match) {
                 tokens.shift(); // discard "when"
                 var expr = tokens.shift();
-                var body = tokens.join(" ");
-                return makeExpr(program, "when", "if(" + expr + "){" + body + "}");
+                var tail = tokens.pop();
+                tokens.push("_ret = " + tail);
+                var body = tokens.join("; ");
+                return makeExpr(program, "when", "(function(){var _ret; if(" + expr + "){" + body + ";} return _ret;})()");
             }
         },
 
         ifBlock: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^if\s+[^\s\(\)]+(\s+#sexpr\d+#){2}$/,
-            translate: function(program, tokens, match){
+            translate: function (program, tokens, match) {
                 tokens.shift(); // discard "if"
                 var expr = tokens.shift();
                 var yes = tokens.shift();
                 var no = tokens.shift();
-                return makeExpr(program, "ifBlock", "if(" + expr + "){" + yes + "}else{" + no + "}");
+                return makeExpr(program, "ifBlock", "(function(){var _ret; if(" + expr + "){_ret = " + yes + ";}else{_ret = " + no + ";} return _ret;})()");
             }
         },
 
         unless: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^unless\s+[^\s\(\)]+(\s+[^\s\(\)]+)+$/,
-            translate: function(program, tokens, match){
+            translate: function (program, tokens, match) {
                 tokens.shift(); // discard "unless"
                 var expr = tokens.shift();
-                var body = tokens.join(" ");
-                return makeExpr(program, "unless", "if(!" + expr + "){" + body + "}");
+                var tail = tokens.pop();
+                tokens.push("_ret = " + tail);
+                var body = tokens.join("; ");
+                return makeExpr(program, "unless", "(function(){var _ret; if(!" + expr + "){" + body + ";} return _ret;})()");
             }
         },
 
         lambda: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^lambda\s+#sexpr\d+#(\s+[^\s\(\)]+)+$/,
             translate: makeFunction.bind(this, "lambda")
         },
 
         class: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^class\s+#sexpr\d+#(\s+[^\s\(\)]+)+$/,
             translate: makeFunction.bind(this, "class")
         },
 
+        method: {
+            on: "sexpr",
+            pattern: /^method\s+#sexpr\d+#(\s+[^\s\(\)]+)+$/,
+            translate: makeFunction.bind(this, "method")
+        },
+
         send: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^send(\s+[^\s\(\)]+){2,}$/,
-            translate: function(program, tokens){
+            translate: function (program, tokens) {
                 tokens.shift(); //discard "send"
                 var target = tokens.shift();
                 var func = tokens.shift();
                 var args = tokens.join(",");
-                return makeExpr(program, "send", "(" + target + "&&(" + target + "." + func + "(" + args + ")));");
+                return makeExpr(program, "send", "(" + target + "&&(" + target + "." + func + "(" + args + ")))");
             }
         },
 
         newObject: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^new(\s+[^\s\(\)]+)+$/,
-            translate: function(program, tokens){
+            translate: function (program, tokens) {
                 tokens.shift(); //discard "new"
                 var func = tokens.shift();
                 var args = tokens.join(",");
-                return makeExpr(program, "newObject", "new " + func + "(" + args + ");");
+                return makeExpr(program, "newObject", "new " + func + "(" + args + ")");
             }
         },
 
         setter: {
-            on: ["sexpr"],
+            on: "sexpr",
             pattern: /^set!(\s+[^\s\(\)]+){2}$/,
-            translate: function(program, tokens){
+            translate: function (program, tokens) {
                 tokens.shift(); //discard "set!"
                 return makeExpr(program, "setter", tokens.shift() + " = " + tokens.shift() + ";");
             }
@@ -246,23 +266,37 @@ var loosp2js = (function (){
         // at this point, just going to assume any left-over s-expressions
         // are function calls.
         call: {
-            on: ["sexpr"],
-            pattern: /^.+$/,
-            translate: function(program, tokens, match){
-                if(tokens.length == 1 && tokens[0].match(/^#[^#\s]+\d+#$/))
+            on: "sexpr",
+            pattern: /^(\s*\S+)+$/g,
+            translate: function (program, tokens, match) {
+                if (tokens[0].indexOf("\n") > 0)
+                    console.log(tokens);
+                if (tokens.length == 1 && tokens[0].match(/^#[^#\s]+\d+#$/))
                     return tokens[0];
-                else{
+                else {
                     var func = tokens.shift();
                     var args = tokens.join(",");
-                    return makeExpr(program, "call", func + "(" + args + ");");
+                    return makeExpr(program, "call", func + "(" + args + ")");
                 }
             }
         },
 
+        sep: {
+            on: "script",
+            pattern: /^([^;]+)$/gm,
+            translate: function (program, tokens, match) {
+                return match + ";";
+            }
+        },
+
+    };
+
+    var postProcess = {
+
         compile: {
-            on: ["script"],
+            on: "script",
             pattern: /#([^\s\d]+)(\d+)#/,
-            translate: function(program, tokens, match){
+            translate: function (program, tokens, match) {
                 var matches = match.match(this.pattern);
                 var type = matches[1];
                 var index = matches[2];
@@ -271,31 +305,55 @@ var loosp2js = (function (){
         },
 
         cleanup: {
-            on: ["script"],
+            on: "script",
             pattern: /(;;)/,
-            translate: function(program, tokens, match){
+            translate: function (program, tokens, match) {
                 return ";"
             }
         },
+    }
 
-    };
-
-    function makeFunction(type, program, tokens, match){
+    function makeFunction(type, program, tokens, match) {
         tokens.shift(); // discard keyword
-        var signature = grammar.compile.translate(program, null, tokens.shift());
+        var signature = postProcess.compile.translate(program, null, tokens.shift());
         var args = signature.split(/\s+/);
         var name = "";
-        if(type != "lambda")
+        var super1 = "", super2 = "";
+        if (type != "lambda")
             name = args.shift();
-        if(type != "class"){
+        if (type != "class") {
             var tail = tokens.pop();
-            if(tail)
+            if (tail)
                 tokens.push("return " + tail);
         }
+        else if (name != "LoospObject") {
+            if (name.indexOf(":") > -1) {
+                var parts = name.split(":");
+                name = parts.shift();
+                super1 = parts.shift();
+            }
+            else {
+                super1 = "LoospObject";
+            }
+            super2 = name + ".prototype = Object.create(" + super1 + ".prototype);";
+            if (super1 == "LoospObject") {
+                super1 = "LoospObject.call(this);";
+                super1 += " this.typeChain.unshift(\"" + name + "\");";
+            }
+            else {
+                super1 = "var base = function(){" + super1 + ".apply(this, Array.prototype.slice.call(arguments));";
+                super1 += " this.typeChain.unshift(\"" + name + "\");}.bind(this);";
+            }
+        }
+        var prefix = "";
+        if (type == "method")
+            prefix = "if(!this.__proto__." + name + ") this.__proto__." + name + " = ";
         return makeExpr(program, type,
-            "function " + name
+            prefix + "function " + name
                 + "(" + args.join(",") + "){"
-                + tokens.join(" ") + " }");
+                + super1
+                + tokens.join("; ") + "; }"
+                + super2);
     }
 
     return loosp2js;

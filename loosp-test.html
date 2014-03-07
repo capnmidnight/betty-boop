@@ -1,60 +1,27 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
 <script type="text/javascript" src="loosp.js"></script>
 <script type="text/loosp">
     // a comment
-(define (for-each arr thunk)
-    (arr.map thunk))
-(define (hello name)
-    (console.log name)
-    "goodbye")
-(define (yell)
-    (console.log "HEY!"))
-(yell)
-(define x "carl")
-(define y (+ 5 7))
-(define arr [1 2 3 4])
-(for-each arr (lambda (k i)
-    (console.log i k)))
-(while (> arr.length 0)
-    (define n (arr.pop))
-    (console.log (* 2 n)))
-(define y (lambda (z)
-    (console.log "mark")))
-(define q (= 1 0))
-(console.log q)
-(define rad (or 1 2 3 4))
-(define rod (and 1 2 3 4))
-(when rad (console.log "TOTALLY ROCK"))
-(when (> 2 0) (console.log "no duh"))
-(unless (< 1 0) (console.log "oookay"))
-(if (> 1 0)
-    (begin
-        (define left "left")
-        (define right "right")
-        (console.log (+ left right)))
-    (console.log "ok in the cosmos"))
-(hello x)
-(set! x "dave")
-(set! y (+ (* 1 15) 2 3 4 5 6 "string"))
-(hello x)
+(define (log)
+    (console.log.apply console arguments))
 
-(class (Shape width height name)
-    (set! this.width width)
-    (set! this.height height)
-    (set! this.name name))
+(class (Shape width height)
+    (method (describe)
+        (log (this.getType)
+             "Area:"
+            (* width height))))
 
-(set! Shape.prototype.describe (lambda ()
-    (console.log this.name "Area:" this.width "x" this.height)))
+(class (Square:Shape size)
+    (base size size))
 
-(define square (new Shape 10 5 "rectangle"))
-(square.describe)
+(define square (new Square 10))
+(send square describe)
+(log (send square getType))
 (set! square null)
-(set! square (send square describe))
-(console.log square)
-(console.log arr)
+(log (send square getType))
 </script>
 </head>
 <body onload="loosp2js()">
