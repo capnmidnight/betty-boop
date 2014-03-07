@@ -182,7 +182,7 @@ var loosp2js = (function () {
             pattern: /^define(\s+[^\s\(\)]+){2}$/,
             translate: function (program, tokens, match) {
                 tokens.shift(); //discard "define"
-                return makeExpr(program, "variable", "var " + tokens.shift() + " = " + tokens.shift() + ";");
+                return makeExpr(program, "variable", "var " + tokens.shift() + " = " + tokens.shift() + ";\n");
             }
         },
 
@@ -193,8 +193,8 @@ var loosp2js = (function () {
                 tokens.shift(); // discard "for-each"
                 var tail = tokens.pop();
                 tokens.push("return " + tail);
-                var body = tokens.join("; ");
-                return makeExpr(program, "begin", "(function(){" + body + ";}).call(this)");
+                var body = tokens.join(";\n ");
+                return makeExpr(program, "begin", "(function(){\n" + body + ";\n}).call(this)");
             }
         },
 
@@ -204,8 +204,8 @@ var loosp2js = (function () {
             translate: function (program, tokens, match) {
                 tokens.shift(); // discard "while"
                 var cond = tokens.shift();
-                var body = tokens.join("; ");
-                var script = "while(" + cond + "){" + body + ";}";
+                var body = tokens.join(";\n ");
+                var script = "while(" + cond + "){\n" + body + ";\n}\n";
                 return makeExpr(program, "whileLoop", script);
             }
         },
@@ -218,8 +218,8 @@ var loosp2js = (function () {
                 var expr = tokens.shift();
                 var tail = tokens.pop();
                 tokens.push("_ret = " + tail);
-                var body = tokens.join("; ");
-                return makeExpr(program, "when", "(function(){var _ret; if(" + expr + "){" + body + ";} return _ret;}).call(this)");
+                var body = tokens.join(";\n ");
+                return makeExpr(program, "when", "(function(){\nvar _ret; if(" + expr + "){\n" + body + ";\n}\n return _ret;\n}).call(this)");
             }
         },
 
@@ -231,7 +231,7 @@ var loosp2js = (function () {
                 var expr = tokens.shift();
                 var yes = tokens.shift();
                 var no = tokens.shift();
-                return makeExpr(program, "ifBlock", "(function(){var _ret; if(" + expr + "){_ret = " + yes + ";}else{_ret = " + no + ";} return _ret;}).call(this)");
+                return makeExpr(program, "ifBlock", "(function(){\nvar _ret;\n if(" + expr + "){\n_ret = " + yes + ";\n}\nelse{\n_ret = " + no + ";\n}\n return _ret;\n}).call(this)");
             }
         },
 
@@ -243,8 +243,8 @@ var loosp2js = (function () {
                 var expr = tokens.shift();
                 var tail = tokens.pop();
                 tokens.push("_ret = " + tail);
-                var body = tokens.join("; ");
-                return makeExpr(program, "unless", "(function(){var _ret; if(!" + expr + "){" + body + ";} return _ret;}).call(this)");
+                var body = tokens.join(";\n ");
+                return makeExpr(program, "unless", "(function(){\nvar _ret;\n if(!" + expr + "){\n" + body + ";\n}\n return _ret;\n}).call(this)");
             }
         },
 
@@ -294,7 +294,7 @@ var loosp2js = (function () {
             pattern: /^set!(\s+[^\s\(\)]+){2}$/,
             translate: function (program, tokens) {
                 tokens.shift(); //discard "set!"
-                return makeExpr(program, "setter", tokens.shift() + " = " + tokens.shift() + ";");
+                return makeExpr(program, "setter", tokens.shift() + " = " + tokens.shift() + ";\n");
             }
         },
 
@@ -329,11 +329,21 @@ var loosp2js = (function () {
             }
         },
 
-        cleanup: {
+        cleanupA: {
             on: "script",
-            pattern: /(;;)/,
+            pattern: /(;;)/g,
             translate: function (program, tokens, match) {
                 return ";"
+            }
+        },
+
+        cleanupB: {
+            // this will end up replacing all semicolons on their own line,
+            // including any that are in the middle of verbatim strings.
+            on: "script",
+            pattern: /^\s*;\s*$/gm,
+            translate: function (program, tokens, match) {
+                return ""
             }
         },
     }
@@ -343,7 +353,7 @@ var loosp2js = (function () {
         var signature = postProcess.compile.translate(program, null, tokens.shift());
         var args = signature.split(/\s+/);
         var name = "";
-        var super1 = "", super2 = "";
+        var super1 = "", super2 = "", matches;
         if (type != "lambda")
             name = args.shift();
         if (type != "class") {
@@ -352,6 +362,7 @@ var loosp2js = (function () {
                 tokens.push("return " + tail);
         }
         else{
+            // figure out super types
             if (name != "LoospObject") {
                 if (name.indexOf(":") > -1) {
                     var parts = name.split(":");
@@ -363,14 +374,16 @@ var loosp2js = (function () {
                 }
                 super2 = name + ".prototype = Object.create(" + super1 + ".prototype);";
                 if (super1 == "LoospObject") {
-                    super1 = "LoospObject.call(this);";
-                    super1 += " this.typeChain.unshift(\"" + name + "\");";
+                    super1 = "LoospObject.call(this);\n";
+                    super1 += " this.typeChain.unshift(\"" + name + "\");\n";
                 }
                 else {
-                    super1 = "var base = function(){" + super1 + ".apply(this, Array.prototype.slice.call(arguments));";
-                    super1 += " this.typeChain.unshift(\"" + name + "\");}.bind(this);";
+                    super1 = "var base = function(){\n" + super1 + ".apply(this, Array.prototype.slice.call(arguments));\n";
+                    super1 += " this.typeChain.unshift(\"" + name + "\");\n}.bind(this);\n";
                 }
             }
+
+            // move method definitions out of class body
             var exprs = [], methods = [];
             tokens.forEach(function(exprID){
                 var expr = postProcess.compile.translate(program, null, exprID);
@@ -380,16 +393,27 @@ var loosp2js = (function () {
                     exprs.push(exprID);
             });
             tokens = exprs;
-            super2 += methods.join("; ") +"; ";
+            super2 += methods.join(";\n ") +";\n ";
         }
         var prefix = "";
         if (type == "method")
             prefix = "prototype." + name + " = ";
+
+        //ellipsis
+        if(args.length > 0){
+            matches = args[args.length - 1].match(/(\S+)\.\.\./);
+            if(matches){
+                args.pop();
+                var argName = matches[1];
+                super1 += "var " + argName + " = Array.prototype.slice.call(arguments);\n c.splice(0, " + args.length + ");\n";
+            }
+        }
+
         return makeExpr(program, type,
             prefix + "function " + name
-                + "(" + args.join(",") + "){"
+                + "(" + args.join(",") + "){\n"
                 + super1
-                + tokens.join("; ") + "; }"
+                + tokens.join(";\n ") + ";\n }\n"
                 + super2);
     }
 

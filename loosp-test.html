@@ -11,10 +11,12 @@
     fox jumps over
     the lazy dog.")
 (class (Shape width height)
+    (set! this.width width)
+    (set! this.height height)
     (method (describe)
         (log (this.getType)
              @"Area:"
-            (* width height))))
+            (* this.width this.height))))
 
 (class (Square:Shape size)
     (base size size))
@@ -24,8 +26,14 @@
 (log (send square getType))
 (set! square null)
 (log (send square getType))
+
+(define (f a b c...)
+    (log "%s, %s {%s}" a b (c.join " -> ")))
+
+(f "a" "b" "c" 2 3 4 5)
+
 </script>
 </head>
-<body onload="loosp2js()">
+<body onload="loosp2js(true)">
 </body>
 </html>
