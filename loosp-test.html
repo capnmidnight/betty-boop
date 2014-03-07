@@ -7,11 +7,13 @@
     // a comment
 (define (log)
     (console.log.apply console arguments))
-
+(log @"the quick brown
+    fox jumps over
+    the lazy dog.")
 (class (Shape width height)
     (method (describe)
         (log (this.getType)
-             "Area:"
+             @"Area:"
             (* width height))))
 
 (class (Square:Shape size)

@@ -29,13 +29,13 @@
             (set! this.height height)
             (set! this.elem (document.createElement "div"))
             (board.appendChild this.elem)
-            (set! elem.style.position "absolute")
-            (set! elem.style.padding "0")
-            (set! elem.style.backgroundColor "#00ff00")
-            (set! elem.style.top (+ this.y "px"))
-            (set! elem.style.left (+ this.x "px"))
-            (set! elem.style.width (+ this.width "px"))
-            (set! elem.style.height (+ this.height "px")))
+            (set! this.elem.style.position "absolute")
+            (set! this.elem.style.padding "0")
+            (set! this.elem.style.backgroundColor "#00ff00")
+            (set! this.elem.style.top (+ this.y "px"))
+            (set! this.elem.style.left (+ this.x "px"))
+            (set! this.elem.style.width (+ this.width "px"))
+            (set! this.elem.style.height (+ this.height "px")))
 
         (class (Player:Rect scoreDisplay x y width height)
             (base x y width height)
@@ -46,7 +46,8 @@
             (method (reset)
                 (this.moveTo this.startY)
                 (set! this.score 0)
-                (set! this.scoreDisplay.innerHTML this.score))
+                (set! this.scoreDisplay.innerHTML this.score)
+                "Ok!")
 
             (method (moveTo y)
                 (set! this.y y)
@@ -54,7 +55,12 @@
                     (set! this.y (- PLAY_HEIGHT PADDLE_LENGTH))
                     (when (< this.y 0)
                         (set! this.y 0)))
-                (set! this.elem.style.top (+ (Math.floor this.y) "px")))
+                (set! this.elem.style.top (+ (Math.floor this.y) "px"))))
+
+        (define ppp (new Player (document.getElementById "score1") 25 44 10 10))
+        (console.log "%0 %s" ppp (ppp.reset))
+        //(console.log "%0 %s" ppp (send ppp reset))
+/*
 
             (method (scored)
                 (set! this.score (+ 1 this.score))
@@ -197,16 +203,18 @@
                              LINE_WIDTH
                              PADDLE_LENGTH))
         (document.addEventListener "mousemove" (lambda (evt)
-            (p1.moveTo (- evt.clientY (* 0.5 PADDLE_LENGTH))))))
+            (p1.moveTo (- evt.clientY (* 0.5 PADDLE_LENGTH))))))*/
     </script>
 </head>
-<body onload="loosp2js()">
-    <div id="board">
-        <div id="divider"></div>
-        <div id="score1" class="score">0</div>
-        <div id="score2" class="score">0</div>
-        <div id="status" class="score">Ready</div>
-        <button type="button" id="start">Start</button>
-    </div>
+<body onload="loosp2js(true)">
+    <form>
+        <div id="board">
+            <div id="divider"></div>
+            <div id="score1" class="score">0</div>
+            <div id="score2" class="score">0</div>
+            <div id="status" class="score">Ready</div>
+            <button type="button" id="start">Start</button>
+        </div>
+    </form>
 </body>
 </html>

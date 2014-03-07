@@ -1,6 +1,6 @@
 var loosp2js = (function () {
     "use strict";
-    function loosp2js(script) {
+    function loosp2js(showScript, script) {
         if (script) {
             return translate(script);
         }
@@ -8,27 +8,30 @@ var loosp2js = (function () {
             var arr = document.querySelectorAll("script[type='text/loosp']");
             for (var i = 0; i < arr.length; ++i) {
                 var script = arr[i].innerHTML;
-                script = loosp2js(script);
-                console.log(script);
+                script = loosp2js(showScript, script);
+                if(showScript)
+                    console.log(script);
                 eval(script);
             }
         }
     }
 
     function translate(script) {
-        var formName,
+        var formName, good = true,
             program = { script: ["(class (LoospObject) (set! this.typeChain [\"LoospObject\"]) (method (getType) this.typeChain[0]))\n " + script.trim()] };
         for (var formName in grammar)
             program[formName] = [];
         for (var formName in grammar)
-            processForm(program, grammar[formName]);
+            if(good)
+                good = processForm(program, grammar[formName]);
         for (var formName in postProcess)
-            processForm(program, postProcess[formName]);
-        return program.script[0];
+            if(good)
+                good = processForm(program, postProcess[formName]);
+        return good ? program.script[0] : "console.error(\"Translation cancelled\");";
     }
 
     function processForm(program, form) {
-        var expr, matches, tokens, expr2;
+        var expr, matches, tokens, expr2, good = true;
         for (var i = 0, l = program[form.on].length; i < l; ++i) {
             expr = program[form.on][i];
             do {
@@ -44,6 +47,22 @@ var loosp2js = (function () {
                 }
             } while (expr != program[form.on][i])
         }
+
+        if(form.validate){
+            for(var i = 0; i < program[form.on].length; ++i){
+                program[form.on][i] = program[form.on][i].replace(form.validate, function(match){
+                    good = false;
+                    return "\n<err>>>> " + match + " <<<<err>\n";
+                });
+            }
+            if(!good){
+                for(var i = 0; i < program.sexpr.length; ++i)
+                    program.sexpr[i] = "(" + program.sexpr[i] + ")";
+                processForm(program, postProcess.compile);
+                console.error("Error: %s in: %s", form.errorMessage, program.script[0]);
+            }
+        }
+        return good;
     }
 
     function makeExpr(program, type, script) {
@@ -57,21 +76,37 @@ var loosp2js = (function () {
 
     var grammar = {
 
+        comments:{
+            on: "script",
+            pattern: /(\/\/[^\n]*\n|\/\*(.|\n)*\*\/)/g,
+            translate: function (program, tokens, match) {
+                return makeExpr(program, "comments", match);
+            },
+            validate: /(\/\*|\*\/)/g,
+            errorMessage: "unterminated block comment"
+        },
+
         sexpr: {
             on: "script",
             pattern: /\(([^\(\)])*\)/g,
             translate: function (program, tokens, match) {
                 return makeExpr(program, "sexpr",
                     match.replace(/(\(|\))/g, ""));
-            }
+            },
+            validate: /(\(|\))/g,
+            errorMessage: "un-matched parenthesis"
         },
 
         literal: {
             on: "sexpr",
-            pattern: /"([^"]*"|\b\d+\.\d+\b|\b\d+\b)/g,
+            pattern: /("[^"\n]*"|\@"[^"]*"|\b\d+\.\d+\b|\b\d+\b)/g,
             translate: function (program, tokens, match) {
+                if(match[0] == "@")
+                    match = match.substring(1).replace(/\n/g, "\\n\"\n+\"");
                 return makeExpr(program, "literal", match);
-            }
+            },
+            validate: /("[^"]*\n)/g,
+            errorMessage: "unterminated string constant"
         },
 
         idsA: {
@@ -239,7 +274,7 @@ var loosp2js = (function () {
                 var target = tokens.shift();
                 var func = tokens.shift();
                 var args = tokens.join(",");
-                return makeExpr(program, "send", "(" + target + "&&(" + target + "." + func + "(" + args + ")))");
+                return makeExpr(program, "send", "((!!" + target + ")?(" + target + "." + func + "(" + args + ")):(undefined))");
             }
         },
 
@@ -278,14 +313,6 @@ var loosp2js = (function () {
                     var args = tokens.join(",");
                     return makeExpr(program, "call", func + "(" + args + ")");
                 }
-            }
-        },
-
-        sep: {
-            on: "script",
-            pattern: /^([^;]+)$/gm,
-            translate: function (program, tokens, match) {
-                return match + ";";
             }
         },
 
