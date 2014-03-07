@@ -1,0 +1,62 @@
+<html>
+<head>
+<style type="text/css">
+</style>
+<script type="text/javascript">
+
+
+function screen(init, input, update, render, shutdown)
+{
+	this.init = init;
+	this.input = input;
+	this.render = render;
+	this.update = update;
+	this.shutdown = shutdown;
+}
+
+function game()
+{
+	var images = new Array();
+	var sounds = new Array();
+	var screens = new Array();
+	var state = -1;
+	var nextState = 0;
+	
+	this.loop = function()
+	{
+		if(nextState != state)
+		{
+			screens[state].init();
+			state = nextState;
+		}
+		screens[state].input();
+		screens[state].update();
+		screens[state].render();
+		if(nextState != state)
+			screens[state].shutdown();
+	}
+	
+	this.start = function()
+	{
+		this.timer = document.setInterval(this.loop, 0);
+		nextState = 0;
+	}
+	this.stop = function()
+	{
+		document.clearInterval(this.timer);
+	}
+}
+
+function game_init()
+{
+
+}
+
+</script>
+</head>
+<body>
+</body>
+<script type="text/javascript">
+game_init();
+</script>
+</html>

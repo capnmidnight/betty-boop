@@ -1,0 +1,150 @@
+<html>
+<head>
+<style>
+.keyword
+{
+	font-weight:bold;
+	color:blue;
+}
+.datatype
+{
+	font-style:italic;
+	color:purple;
+}
+.literal
+{
+	font-style:none;
+	font-weight:none;
+	color:green;
+}
+</style>
+<script language="JavaScript">
+var keywords = /(abstract|event|new|struct|as|explicit|null|switch|base|extern|this|false|operator|throw|break|finally|out|true|fixed|override|try|case|params|typeof|catch|for|private|foreach|protected|checked|goto|public|unchecked|class|if|readonly|unsafe|const|implicit|ref|continue|return|using|virtual|default|interface|sealed|volatile|delegate|internal|do|is|sizeof|while|lock|stackalloc|else|static|enum|namespace|get|partial|set|value|where|yield)/g;
+
+var datatypes = / (byte|string|void|int|float|double|long|char|uint|ulong|object|ushort|decimal|sbyte|short|void|bool) /g;
+
+//var literals = /((\"[^\"]*\"))/g;
+
+function PageLoad()
+{
+	var body = document.getElementById("content");
+	var txt = body.innerHTML;
+	txt = txt.replace(keywords, "<span class='keyword'>$1</span>");
+	txt = txt.replace(datatypes, "<span class='datatype'> $1 </span>");
+	body.innerHTML = txt;
+}
+</script>
+</head>
+<body onload="PageLoad()">
+<div id="content">
+<pre>
+using System;
+using System.Drawing;
+using Game.Common.Physics;
+using Game.Common.Utility;
+using Foot_Race.Settings;
+namespace Foot_Race.Screens
+{
+	/// <summary>
+	/// Summary description for PlayScreen.
+	/// </summary>
+	public class PlayScreen : Game.Common.Graphics.IScreenPainter
+	{
+		private Course course;
+		private Character guy;
+		private int goCode, wait;
+		private PlayerSettings play;
+		private NetworkSettings net;
+		private RaceSettings race;
+		/// <summary>
+		/// the actual gameplay element
+		/// </summary>
+		/// <param name="d">user data</param>
+		public PlayScreen(PlayerSettings d, NetworkSettings n, RaceSettings r)
+		{
+			play = d;
+			net = n;
+			race = r;
+			guy = new Character("../../artwork/tire.png", 6);
+			course = new Course("../../data/map2.map", "../../artwork/tiles.png", "../../artwork/back.png");
+			course.Objects = new IMoveableObject[1]{guy};
+		}
+		/// <summary>
+		/// parse the input poller
+		/// </summary>
+		/// <param name="im">the input poller object</param>
+		public void AcceptInput(InputManager im)
+		{
+			if(wait <= 0)
+			{
+				if(im.keys[(int)InputManager.BACK])
+				{
+					goCode = EntryPoint.GAME_OVER;
+				}
+				else if(im.keys[(int)InputManager.RIGHT_B])
+				{
+					guy.MoveRight();
+				}
+				else if(im.keys[(int)InputManager.LEFT_B])
+				{
+					guy.MoveLeft();
+				}
+				if(im.keys[(int)InputManager.JUMP])
+				{
+					guy.MoveUp();
+				}
+
+				if(im.keys[(int)InputManager.CONFIRM])
+				{
+					guy.MaxSpeed = 15;
+				}
+				else
+				{
+					guy.MaxSpeed = 7;
+				}
+			}
+		}
+
+		public int GoCode
+		{
+			get
+			{
+				return goCode;
+			}
+		}
+		public void Paint(System.Drawing.Graphics g, int w, int h)
+		{
+			course.Paint(g, (int)guy.X - 100, 0);
+			guy.Paint(g, (int)guy.X - 100, 0);
+
+		}
+		public void Init()
+		{
+			guy.Init();
+			course.Init();
+			goCode = EntryPoint.PLAY;
+			wait = 10;
+		}
+
+		public void Update(int delTime)
+		{
+			course.Update(delTime);
+			guy.Update(delTime);
+			--wait;
+		}
+		/// <summary>
+		/// get the background image of the course on this screen.
+		/// </summary>
+		public System.Drawing.Bitmap BGImage
+		{
+			get
+			{
+				return course.back;
+			}
+		}
+	}
+}
+</pre>
+</div>
+</body>
+</html>

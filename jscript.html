@@ -1,0 +1,294 @@
+﻿﻿<HTML><HEAD>
+<TITLE>Javascript Intellisense</TITLE>
+<META http-equiv=Content-Type content="text/html; charset=utf-8"></HEAD>
+<BODY>
+<form onsubmit="return onSubmit()" id="form1">
+<input id="exprField" size="80" onkeydown="return onKeyDown(this, event)" onkeyup="onKeyUp(this, event)" type="text"> 
+<div id="outputField"></div>
+
+<select id="enumList" style="VISIBILITY: hidden; POSITION: absolute; width: 400px;" ondblclick="enumListDoubleClick()" size="20">
+</select>
+
+</form>
+
+<script language="javascript">
+
+var enumList = document.getElementById('enumList');
+var exprField = document.getElementById('exprField');
+var outputField = document.getElementById('outputField');
+var form1 = document.getElementById('form1');
+
+var listExpr;
+function rebuildList()
+{	
+	var oldListExpr = listExpr;
+	
+	listExpr = exprField.value;
+	
+		
+	
+	//find the dot
+	var dotIndex = listExpr.lastIndexOf('.');
+	if(dotIndex == -1)
+	{
+		//remove existing items
+		while(enumList.firstChild) enumList.removeChild(enumList.firstChild);		
+		listExpr = null;
+		return;
+	}
+		
+	//get the expression up to and including the dot
+	listExpr = listExpr.substring(0, dotIndex + 1);
+	
+	if(listExpr == oldListExpr)
+		return;//dont need to rebuild it
+		
+	//remove existing items and rebuild the list
+	while(enumList.firstChild) enumList.removeChild(enumList.firstChild);
+	
+	//get the properties
+	var array = new Array();
+	try
+	{
+		//evaluate the expression up to the last dot
+		var obj = eval(listExpr.substring(0, listExpr.length - 1));
+	}
+	catch(e)
+	{
+		return;//invalid expression
+	}
+	//enumerate the properties and sort em
+	for(p in obj)
+		array.push('' + p);
+	array.sort();
+	
+	for(p in array)
+	{		
+		var member = array[p];
+		var newOption = document.createElement("option");
+		enumList.appendChild(newOption);
+		newOption.innerHTML = member + ' ';
+			
+		//evaluate the member
+		try
+		{
+			var result = eval(listExpr + member);//get the result
+		}
+		catch(e)
+		{
+			newOption.innerHTML += '[eval exception]';
+			continue;
+		}
+		
+		if(("" + result).indexOf('function') != -1)
+		{
+			//its a function
+			newOption.innerHTML += '()';
+		}
+		else
+		{
+			//its a property			
+			try//this crashes sometimes
+			{
+				if(!result)
+					newOption.innerHTML += "null";
+				else if(("" + result).charAt(0) == '[')
+					newOption.innerHTML += result;//dont put quotes around objects
+				else
+					newOption.innerHTML += "\"" + result + "\"";//put quotes around strings
+					
+			}
+			catch(e)
+			{
+			}
+		}			
+	}		
+}
+
+//if the expression that produced the members is not present, this also hides the list
+function showList()
+{				
+	//set the enum list to the right place
+	enumList.style.left = exprField.offsetLeft + exprField.offsetWidth;
+	enumList.style.top = exprField.offsetTop;
+	//show the list
+	enumList.style.visibility = "visible";
+}
+
+function hideList()
+{
+	enumList.style.visibility = "hidden";
+}
+
+function onSubmit()
+{
+	//i have to add these here for some reason :[
+	var enumList = document.getElementById('enumList');
+	var exprField = document.getElementById('exprField');
+
+	var expr = exprField.value;
+	   
+    if(enumList.style.visibility == "visible")
+    {
+		//fill in from the list
+		var lastDot = expr.lastIndexOf('.');
+		if(enumList.selectedIndex != -1 && lastDot != -1)
+		{
+			var member = enumList[enumList.selectedIndex].text;
+			member = member.substring(0, member.indexOf(' '));//all members are terminated with a space
+			exprField.value = exprField.value.substring(0, lastDot) + '.' + member;
+		}
+		
+		//close the list
+        hideList();
+        exprField.focus();//focus back to the field
+        return false;
+    }    
+	
+	try
+	{
+		output = '' + eval(expr);
+	}
+	catch(e)
+	{
+		output = 'Exception: ' + e;
+	}
+	
+	//output it to the div 	
+	outputField.innerHTML = '<b>Eval: </b>' + output + '<br />' + outputField.innerHTML;
+	
+	//dont want it to leave
+	return false;
+}
+
+var expr;//this is recorded here so that onKeyUp can find out if the text has changed
+function onKeyDown(oThis, e)
+{		
+	expr = exprField.value;	
+	
+	var keycode;
+	if (window.event) keycode = window.event.keyCode;
+	else if (e) keycode = e.which;
+	
+	if(keycode == 0x8)//delete key
+	{
+		if(expr.charAt(expr.length - 1) == '.')
+		{	
+			//user is deleting the dot
+			hideList();
+		}
+		//else
+		//{
+			//rebuildList();//onKeyUp will show it later on
+		//}
+	}
+	else if(keycode == 0x1B)//escape key
+	{
+		if(enumList.style.visibility == "visible")
+		{
+			suppressList = true;
+			enumList.style.visibility = "hidden";
+			return false;//dont clear the text
+		}
+	}
+	else if(keycode == 0x26)//up key
+	{
+		if(enumList.selectedIndex == -1 || 
+			enumList.selectedIndex == 0)
+		{
+			enumList.selectedIndex = enumList.childNodes.length - 1;//set it to the bottom		
+		}
+		else
+		{
+			enumList.selectedIndex--;//move the selection up
+		}
+		return false;
+	}
+	else if(keycode == 0x28)//down key
+	{
+		if(enumList.selectedIndex == -1 || 
+			enumList.selectedIndex == enumList.childNodes.length - 1)
+		{
+			enumList.selectedIndex = 0;//set it to the top
+		}		
+		else						
+		{
+			enumList.selectedIndex++;//move the selection down
+		}
+		return false;
+	}	
+	
+	return true;
+}
+
+function onKeyUpTimerFunc(keycode)
+{
+	if(keycode == 0xD)//return key
+		return;//onKeyDown deals with this
+		
+	if(expr == exprField.value)
+		return;//dont do anything if the text didnt change, ie arrow keys were pressed				
+	
+	rebuildList();
+	//check if the expression that produced the list is still present
+	if(!listExpr || listExpr != exprField.value.substring(0, listExpr.length))	
+	{
+		hideList();
+		return;
+	}
+	
+	//try to select something from the list from the member after the dot
+	var i = exprField.value.lastIndexOf('.');
+	if(i == -1)
+		return;
+		
+	var afterDot = exprField.value.substring(i + 1);
+	if(!afterDot)
+	{
+		showList();
+		return;//nothing after the dot
+	}
+		
+	for(i = 0; i < enumList.childNodes.length; i++)
+	{
+		var member = enumList.childNodes[i].innerHTML;
+		var memberCut = member.substring(0, afterDot.length);
+		if(afterDot && memberCut.toLowerCase() == afterDot.toLowerCase())
+		{
+			if(i != enumList.selectedIndex)//only select it if its not already selected
+			{
+				showList();
+				enumList.childNodes[i].selected = true;
+			}
+			break;
+		}
+	}	
+	
+	if(i == enumList.childNodes.length)
+	{
+		//nothing was selected so the field doesnt match any member, so deselect anything
+		enumList.childNodes[enumList.selectedIndex].selected = false;
+	}
+	
+	showList();
+}
+
+var timeoutID = null;
+function onKeyUp(oThis, e)
+{
+	var keycode;
+	if (window.event) keycode = window.event.keyCode;
+	else if (e) keycode = e.which;
+	
+	//this is so that the computer is not over burdened with call presses
+	clearTimeout(timeoutID);
+	timeoutID = setTimeout("onKeyUpTimerFunc(" + keycode + ");", 100);		
+}
+
+function enumListDoubleClick()
+{
+	onSubmit();
+}
+
+</script>
+</BODY></HTML>
