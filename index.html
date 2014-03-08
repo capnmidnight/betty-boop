@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=1;" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=1" />
     <title>Ping Pong</title>
     <script type="text/javascript" src="loosp.js"></script>
     <script type="text/loosp">
@@ -111,15 +111,14 @@
                 good))
 
         (define (drawText color text x y font blankBack)
-            (when (not (or (= text null) (= text undefined)))
-                (set! g.font (or font "40px Courier"))
-                (define size (g.measureText text))
-                (set! x (- x (* 0.5 size.width)))
-                (when blankBack
-                    (set! g.fillStyle "#000000")
-                    (g.fillRect x (- y 40) size.width 60))
-                (set! g.fillStyle color)
-                (g.fillText text x y)))
+            (set! g.font (or font "40px Courier"))
+            (define size (g.measureText text))
+            (set! x (- x (* 0.5 size.width)))
+            (when blankBack
+                (set! g.fillStyle "#000000")
+                (g.fillRect x (- y 40) size.width 60))
+            (set! g.fillStyle color)
+            (g.fillText text x y))
 
         (define (prePlay delta)
             (if (< delta 1000)
@@ -181,12 +180,14 @@
             (divider.draw)
             (topBar.draw)
             (bottom.draw)
-            (drawText "#00ff00" p1.score (* 0.5 (- PLAY_WIDTH 60)) (* 5 LINE_WIDTH))
-            (drawText "#00ff00" p2.score (* 0.5 (+ PLAY_WIDTH 60)) (* 5 LINE_WIDTH))
+            (drawText "#00ff00" p1.score (* 0.5 (- PLAY_WIDTH 60)) (* 5 LINE_WIDTH) false)
+            (drawText "#00ff00" p2.score (* 0.5 (+ PLAY_WIDTH 60)) (* 5 LINE_WIDTH) false)
             (ball.draw)
             (p1.draw)
             (p2.draw)
-            (drawText "#00ff00" status (* 0.5 PLAY_WIDTH) (* 0.5 PLAY_HEIGHT)) true)
+            (when (and (!= null status)
+                       (!= "null" status)) // apparently Chrome is an idiot
+                (drawText "#00ff00" status (* 0.5 PLAY_WIDTH) (* 0.5 PLAY_HEIGHT) true)))
 
         (define (start)
             (when (= null state)

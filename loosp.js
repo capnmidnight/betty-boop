@@ -145,7 +145,7 @@ var loosp2js = (function () {
 
         operatorsA: {
             on: "sexpr",
-            pattern: /^([+\-%^*\/><]|instanceof|in|>=|<=|!=)(\s+\S+){2,}$/,
+            pattern: /^([+\-%^*\/><]|instanceof|in|>=|<=|!=|!==)(\s+\S+){2,}$/,
             translate: function (program, tokens, match) {
                 var op = tokens.shift();
                 return makeExpr(program, "operatorsA",
