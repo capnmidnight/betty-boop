@@ -2,23 +2,21 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=1;" />
     <title>Ping Pong</title>
-    <link type="text/css" rel="stylesheet" href="pong.css">
     <script type="text/javascript" src="loosp.js"></script>
     <script type="text/loosp">
-        (define PLAY_WIDTH 800)
-        (define PLAY_HEIGHT 400)
         (define LINE_WIDTH 10)
         (define PADDLE_LENGTH 100)
         (define AI_STEP 5)
+        (define PLAY_WIDTH (* 0.99 window.innerWidth))
+        (define PLAY_HEIGHT (* 0.99 window.innerHeight))
+        (define opName "Click")
+        (when (in "ontouchstart" window)
+            (set opName "Touch"))
 
-        (define startButton (document.getElementById "start"))
-        (define statusBox (document.getElementById "status"))
+        (define status (+ opName " to start!"))
         (define canv (document.getElementById "board"))
-        (set! canv.width PLAY_WIDTH)
-        (set! canv.height PLAY_HEIGHT)
-        (set! canv.style.width (+ PLAY_WIDTH "px"))
-        (set! canv.style.height (+ PLAY_HEIGHT "px"))
         (define g (canv.getContext "2d"))
         (set! g.font "36pt Courier")
 
@@ -26,7 +24,8 @@
         (define p2 null)
         (define ball null)
         (define divider null)
-        (define timer null)
+        (define topBar null)
+        (define bottom null)
         (define lastFrame null)
         (define state null)
 
@@ -111,15 +110,26 @@
                 (set! good (or good (p1.bounce this) (p2.bounce this)))
                 good))
 
+        (define (drawText color text x y font blankBack)
+            (when (not (or (= text null) (= text undefined)))
+                (set! g.font (or font "40px Courier"))
+                (define size (g.measureText text))
+                (set! x (- x (* 0.5 size.width)))
+                (when blankBack
+                    (set! g.fillStyle "#000000")
+                    (g.fillRect x (- y 40) size.width 60))
+                (set! g.fillStyle color)
+                (g.fillText text x y)))
+
         (define (prePlay delta)
             (if (< delta 1000)
-                (set! statusBox.innerHTML "Ready...")
+                (set! status "Ready...")
                 (if (< delta 2000)
-                    (set! statusBox.innerHTML "Set...")
+                    (set! status "Set...")
                     (if (< delta 3000)
-                        (set! statusBox.innerHTML "GO!")
+                        (set! status "GO!")
                         (begin
-                            (set! statusBox.style.display "none")
+                            (set! status null)
                             (set! state updateGame)))))
             (>= delta 3000))
 
@@ -137,7 +147,6 @@
                     (when (!= scoringPlayer null)
                         (scoringPlayer.scored)
                         (ball.drop (or (and (= scoringPlayer p1) 1) -1) (+ p1.score p2.score))
-                        (set! statusBox.style.display "block")
                         (if (< scoringPlayer.score 5)
                             (set! state prePlay)
                             (set! state gameOver))))
@@ -151,13 +160,11 @@
         (define (gameOver delta)
             (define ret false)
             (if (< delta 3000)
-                (set! statusBox.innerHTML "Game Over")
+                (set! status "Game Over")
                 (begin
-                    (clearInterval timer)
-                    (set! statusBox.style.display "none")
-                    (set! startButton.style.display "block")
                     (p1.reset)
                     (p2.reset)
+                    (set! status null)
                     (set! state prePlay)
                     (set! ret true)))
             ret)
@@ -165,31 +172,29 @@
         (define (timerTick)
             (define currentFrame ((new Date).getTime))
             (define delta (- currentFrame lastFrame))
-            (when (state delta)
+            (when (and state (state delta))
                 (set! lastFrame currentFrame))
 
-            (set! g.fillStyle "rgba(0, 0, 0, 0.333)")
+            (set! g.fillStyle "rgba(0, 0, 0, 0.02)")
             (g.fillRect 0 0 PLAY_WIDTH PLAY_HEIGHT)
-            (define img (new Image))
-            (set! img.src (canv.toDataURL))
-            (g.drawImage img -3 -3 (+ 6 PLAY_WIDTH) (+ 6 PLAY_HEIGHT))
             (set! g.fillStyle "#00ff00")
             (divider.draw)
+            (topBar.draw)
+            (bottom.draw)
+            (drawText "#00ff00" p1.score (* 0.5 (- PLAY_WIDTH 60)) (* 5 LINE_WIDTH))
+            (drawText "#00ff00" p2.score (* 0.5 (+ PLAY_WIDTH 60)) (* 5 LINE_WIDTH))
             (ball.draw)
             (p1.draw)
             (p2.draw)
-            (g.fillText p1.score (* 0.5 (- PLAY_WIDTH 100)) (* 5 LINE_WIDTH))
-            (g.fillText p2.score (* 0.5 (+ PLAY_WIDTH 35)) (* 5 LINE_WIDTH)))
+            (drawText "#00ff00" status (* 0.5 PLAY_WIDTH) (* 0.5 PLAY_HEIGHT)) true)
 
         (define (start)
-            (set! startButton.style.display "none")
-            (set! statusBox.style.display "block")
-            (set! lastFrame ((new Date).getTime))
-            (ball.drop 1 0);
-            (set! state prePlay)
-            (set! timer (setInterval timerTick 33)))
+            (when (= null state)
+                (set! status null)
+                (set! lastFrame ((new Date).getTime))
+                (ball.drop 1 0);
+                (set! state prePlay)))
 
-        (startButton.addEventListener "click" start)
         (set! ball (new Ball LINE_WIDTH LINE_WIDTH))
         (set! p1 (new Player LINE_WIDTH
                              (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH))
@@ -200,16 +205,49 @@
                              LINE_WIDTH
                              PADDLE_LENGTH))
         (set! divider (new Rect (* 0.5 (- PLAY_WIDTH LINE_WIDTH)) 0 LINE_WIDTH PLAY_HEIGHT))
+        (set! topBar (new Rect 0 0 PLAY_WIDTH LINE_WIDTH))
+        (set! bottom (new Rect 0 (- PLAY_HEIGHT LINE_WIDTH) PLAY_WIDTH LINE_WIDTH))
 
+
+        (define (setWindowSize)
+            (set! PLAY_WIDTH (* 0.99 window.innerWidth))
+            (set! PLAY_HEIGHT (* 0.99 window.innerHeight))
+            (set! canv.width PLAY_WIDTH)
+            (set! canv.height PLAY_HEIGHT)
+            (set! canv.style.width (+ PLAY_WIDTH "px"))
+            (set! canv.style.height (+ PLAY_HEIGHT "px"))
+            (set! p1.y (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH)))
+            (set! p2.x (- PLAY_WIDTH (* 2 LINE_WIDTH)))
+            (set! p2.y (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH)))
+            (set! divider.x (* 0.5 (- PLAY_WIDTH LINE_WIDTH)))
+            (set! divider.height PLAY_HEIGHT)
+            (set! topBar.width PLAY_WIDTH)
+            (set! bottom.width PLAY_WIDTH)
+            (set! bottom.y (- PLAY_HEIGHT LINE_WIDTH))
+            undefined)
+        (setWindowSize)
+
+        (define (movePlayer y)
+            (p1.moveTo (- y (* 0.5 PADDLE_LENGTH))))
+
+        (document.addEventListener "touchmove" (lambda (evt)
+            (when (< 0 evt.touches.length)
+                (movePlayer evt.touches[0].pageY))
+            (when (= state updateGame)
+                (evt.preventDefault))))
         (document.addEventListener "mousemove" (lambda (evt)
-            (p1.moveTo (- evt.clientY (* 0.5 PADDLE_LENGTH)))))
+            (movePlayer evt.clientY)))
+
+        (document.addEventListener "touchstart" start)
+        (document.addEventListener "mousedown" start)
+
+        (window.addEventListener "resize" setWindowSize)
+
+        (setInterval timerTick 1)
+
     </script>
 </head>
-<body onload="loosp2js()">
-    <form>
-        <canvas id="board"></canvas>
-        <div id="status" class="score">Ready</div>
-        <button type="button" id="start">Click here to start...</button>
-    </form>
+<body onload="loosp2js(false)" style="background-color:black;padding:0;margin:0;">
+    <canvas id="board" style="margin:0 auto"></canvas>
 </body>
 </html>

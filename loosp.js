@@ -11,7 +11,10 @@ var loosp2js = (function () {
                 script = loosp2js(showScript, script);
                 if(showScript)
                     console.log(script);
-                eval(script);
+                var elm = document.createElement("script");
+                elm.type = "text/javascript";
+                elm.src = "data:text/javascript;base64," + btoa(script);
+                document.head.appendChild(elm);
             }
         }
     }
@@ -142,7 +145,7 @@ var loosp2js = (function () {
 
         operatorsA: {
             on: "sexpr",
-            pattern: /^([+\-%^*\/><]|instanceof|>=|<=|!=)(\s+\S+){2,}$/,
+            pattern: /^([+\-%^*\/><]|instanceof|in|>=|<=|!=)(\s+\S+){2,}$/,
             translate: function (program, tokens, match) {
                 var op = tokens.shift();
                 return makeExpr(program, "operatorsA",
