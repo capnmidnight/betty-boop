@@ -11,11 +11,7 @@
         (define AI_STEP 5)
         (define PLAY_WIDTH (* 0.99 window.innerWidth))
         (define PLAY_HEIGHT (* 0.99 window.innerHeight))
-        (define opName "Click")
-        (when (in "ontouchstart" window)
-            (set opName "Touch"))
-
-        (define status (+ opName " to start!"))
+        (define status "Tap to start!")
         (define canv (document.getElementById "board"))
         (define g (canv.getContext "2d"))
         (set! g.font "36pt Courier")
@@ -189,12 +185,6 @@
                        (!= "null" status)) // apparently Chrome is an idiot
                 (drawText "#00ff00" status (* 0.5 PLAY_WIDTH) (* 0.5 PLAY_HEIGHT) true)))
 
-        (define (start)
-            (when (= null state)
-                (set! status null)
-                (set! lastFrame ((new Date).getTime))
-                (ball.drop 1 0);
-                (set! state prePlay)))
 
         (set! ball (new Ball LINE_WIDTH LINE_WIDTH))
         (set! p1 (new Player LINE_WIDTH
@@ -226,7 +216,17 @@
             (set! bottom.width PLAY_WIDTH)
             (set! bottom.y (- PLAY_HEIGHT LINE_WIDTH))
             undefined)
+
         (setWindowSize)
+
+        (define (start)
+            (when (or (= null state) (= "null" state))
+                (set! status null)
+                (set! lastFrame ((new Date).getTime))
+                (ball.drop 1 0);
+                (set! state prePlay))
+                undefined)
+
 
         (define (movePlayer y)
             (p1.moveTo (- y (* 0.5 PADDLE_LENGTH))))
@@ -235,12 +235,14 @@
             (when (< 0 evt.touches.length)
                 (movePlayer evt.touches[0].pageY))
             (when (= state updateGame)
-                (evt.preventDefault))))
+                (evt.preventDefault))
+            undefined))
         (document.addEventListener "mousemove" (lambda (evt)
-            (movePlayer evt.clientY)))
+            (movePlayer evt.clientY)
+            undefined))
 
-        (document.addEventListener "touchstart" start)
-        (document.addEventListener "mousedown" start)
+        (document.addEventListener "touchend" start)
+        (document.addEventListener "mouseup" start)
 
         (window.addEventListener "resize" setWindowSize)
 
