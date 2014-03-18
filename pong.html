@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=1" />
+    <title>Ping Pong</title>
+    <script type="text/javascript" src="loosp.js"></script>
+    <script type="text/loosp">
+        (define LINE_WIDTH 10)
+        (define PADDLE_LENGTH 100)
+        (define AI_STEP 5)
+        (define PLAY_WIDTH (* 0.99 window.innerWidth))
+        (define PLAY_HEIGHT (* 0.99 window.innerHeight))
+        (define status "Tap to start!")
+        (define canv (document.getElementById "board"))
+        (define g (canv.getContext "2d"))
+        (set! g.font "36pt Courier")
+
+        (define p1 null)
+        (define p2 null)
+        (define ball null)
+        (define divider null)
+        (define topBar null)
+        (define bottom null)
+        (define lastFrame null)
+        (define state null)
+
+        (class (Rect x y width height)
+            (set! this.x x)
+            (set! this.y y)
+            (set! this.width width)
+            (set! this.height height)
+            (set! this.lastX this.x)
+            (set! this.lastY this.x)
+
+            (method (draw)
+                (g.fillRect this.x this.y this.width this.height)))
+
+        (class (Player:Rect x y width height)
+            (base x y width height)
+            (set! this.startY y)
+            (set! this.score 0)
+
+            (method (reset)
+                (this.moveTo this.startY)
+                (set! this.score 0)
+                "Ok!")
+
+            (method (moveTo y)
+                (set! this.y y)
+                (if (> this.y (- PLAY_HEIGHT PADDLE_LENGTH))
+                    (set! this.y (- PLAY_HEIGHT PADDLE_LENGTH))
+                    (when (< this.y 0)
+                        (set! this.y 0))))
+
+            (method (scored)
+                (set! this.score (+ 1 this.score)))
+
+            (method (AI ball)
+                (when (> ball.dx 0)
+                    (if (> ball.y (- (+ this.y this.height) LINE_WIDTH))
+                        (this.moveTo (+ 1 this.y))
+                        (when (< ball.y this.y)
+                              (this.moveTo (- this.y 1))))))
+
+            (method (intersect ball)
+                (and (>= (+ ball.x ball.width) this.x)
+                     (< ball.x (+ this.x this.width))
+                     (>= (+ ball.y ball.height) this.y)
+                     (< ball.y (+ this.y this.height))))
+
+            (method (bounce ball)
+                (define good false)
+                (when (this.intersect ball)
+                    (set! ball.dx (* ball.dx -1.1))
+                    (define dy (+ (- this.y ball.y) (* 0.5 (- this.height ball.height))))
+                    (set! ball.dy (- ball.dy (* dy 0.003003003003003003003003003003)))
+                    (set! good true))
+                good))
+
+
+        (class (Ball:Rect width height)
+            (base -1000 0 width height)
+            (set! this.dx 0)
+            (set! this.dy 0)
+
+            (method (drop direction speed)
+                (set! this.x -100)
+                (set! this.y 0)
+                (set! this.x (* 0.5 (- PLAY_WIDTH LINE_WIDTH)))
+                (set! this.y (* 0.5 (- PLAY_HEIGHT LINE_WIDTH)))
+                (define vel (+ 0.2 (* 0.0375 speed)))
+                (define angle (* (- (* (Math.random) 2) 1) Math.PI 0.25))
+                (set! this.dx (* direction (Math.cos angle) vel))
+                (set! this.dy (* (Math.sin angle) vel)))
+
+            (method (advance)
+                (set! this.x (+ this.x this.dx))
+                (set! this.y (+ this.y this.dy)))
+
+            (method (bounced p1 p2 maxY)
+                (define good false)
+                (when (or (< this.y 0) (>= this.y maxY))
+                    (set! this.dy (* this.dy -1))
+                    (set! good true))
+                (set! good (or good (p1.bounce this) (p2.bounce this)))
+                good))
+
+        (define (drawText color text x y font blankBack)
+            (set! g.font (or font "40px Courier"))
+            (define size (g.measureText text))
+            (set! x (- x (* 0.5 size.width)))
+            (when blankBack
+                (set! g.fillStyle "#000000")
+                (g.fillRect x (- y 40) size.width 60))
+            (set! g.fillStyle color)
+            (g.fillText text x y))
+
+        (define (prePlay delta)
+            (if (< delta 1000)
+                (set! status "Ready...")
+                (if (< delta 2000)
+                    (set! status "Set...")
+                    (if (< delta 3000)
+                        (set! status "GO!")
+                        (begin
+                            (set! status null)
+                            (set! state updateGame)))))
+            (>= delta 3000))
+
+        (define (updateGame delta)
+            (define i 0)
+            (define scoringPlayer null)
+            (while (and (< i delta) (= state updateGame))
+                (ball.advance)
+                (when (not (ball.bounced p1 p2 (- PLAY_HEIGHT LINE_WIDTH)))
+                    (if (< ball.x p1.x)
+                        (set! scoringPlayer p2)
+                        (when (> ball.x p2.x)
+                            (set! scoringPlayer p1)))
+
+                    (when (!= scoringPlayer null)
+                        (scoringPlayer.scored)
+                        (ball.drop (or (and (= scoringPlayer p1) 1) -1) (+ p1.score p2.score))
+                        (if (< scoringPlayer.score 5)
+                            (set! state prePlay)
+                            (set! state gameOver))))
+                (set! i (+ 1 i)))
+            (set! i 0)
+            (while (< i delta)
+                (p2.AI ball)
+                (set! i (+ i AI_STEP)))
+            true)
+
+        (define (gameOver delta)
+            (define ret false)
+            (if (< delta 3000)
+                (set! status "Game Over")
+                (begin
+                    (p1.reset)
+                    (p2.reset)
+                    (set! status null)
+                    (set! state prePlay)
+                    (set! ret true)))
+            ret)
+
+        (define (timerTick)
+            (define currentFrame ((new Date).getTime))
+            (define delta (- currentFrame lastFrame))
+            (when (and state (state delta))
+                (set! lastFrame currentFrame))
+
+            (set! g.fillStyle "rgba(0, 0, 0, 0.02)")
+            (g.fillRect 0 0 PLAY_WIDTH PLAY_HEIGHT)
+            (set! g.fillStyle "#00ff00")
+            (divider.draw)
+            (topBar.draw)
+            (bottom.draw)
+            (drawText "#00ff00" p1.score (* 0.5 (- PLAY_WIDTH 60)) (* 5 LINE_WIDTH) false)
+            (drawText "#00ff00" p2.score (* 0.5 (+ PLAY_WIDTH 60)) (* 5 LINE_WIDTH) false)
+            (ball.draw)
+            (p1.draw)
+            (p2.draw)
+            (when (and (!= null status)
+                       (!= "null" status)) // apparently Chrome is an idiot
+                (drawText "#00ff00" status (* 0.5 PLAY_WIDTH) (* 0.5 PLAY_HEIGHT) true)))
+
+
+        (set! ball (new Ball LINE_WIDTH LINE_WIDTH))
+        (set! p1 (new Player LINE_WIDTH
+                             (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH))
+                             LINE_WIDTH
+                             PADDLE_LENGTH))
+        (set! p2 (new Player (- PLAY_WIDTH (* 2 LINE_WIDTH))
+                             (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH))
+                             LINE_WIDTH
+                             PADDLE_LENGTH))
+        (set! divider (new Rect (* 0.5 (- PLAY_WIDTH LINE_WIDTH)) 0 LINE_WIDTH PLAY_HEIGHT))
+        (set! topBar (new Rect 0 0 PLAY_WIDTH LINE_WIDTH))
+        (set! bottom (new Rect 0 (- PLAY_HEIGHT LINE_WIDTH) PLAY_WIDTH LINE_WIDTH))
+
+
+        (define (setWindowSize)
+            (set! PLAY_WIDTH (* 0.99 window.innerWidth))
+            (set! PLAY_HEIGHT (* 0.99 window.innerHeight))
+            (set! canv.width PLAY_WIDTH)
+            (set! canv.height PLAY_HEIGHT)
+            (set! canv.style.width (+ PLAY_WIDTH "px"))
+            (set! canv.style.height (+ PLAY_HEIGHT "px"))
+            (set! p1.y (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH)))
+            (set! p2.x (- PLAY_WIDTH (* 2 LINE_WIDTH)))
+            (set! p2.y (* 0.5 (- PLAY_HEIGHT PADDLE_LENGTH)))
+            (set! divider.x (* 0.5 (- PLAY_WIDTH LINE_WIDTH)))
+            (set! divider.height PLAY_HEIGHT)
+            (set! topBar.width PLAY_WIDTH)
+            (set! bottom.width PLAY_WIDTH)
+            (set! bottom.y (- PLAY_HEIGHT LINE_WIDTH))
+            undefined)
+
+        (setWindowSize)
+
+        (define (start)
+            (when (or (= null state) (= "null" state))
+                (set! status null)
+                (set! lastFrame ((new Date).getTime))
+                (ball.drop 1 0);
+                (set! state prePlay))
+                undefined)
+
+
+        (define (movePlayer y)
+            (p1.moveTo (- y (* 0.5 PADDLE_LENGTH))))
+
+        (document.addEventListener "touchmove" (lambda (evt)
+            (when (< 0 evt.touches.length)
+                (movePlayer evt.touches[0].pageY))
+            (when (= state updateGame)
+                (evt.preventDefault))
+            undefined))
+        (document.addEventListener "mousemove" (lambda (evt)
+            (movePlayer evt.clientY)
+            undefined))
+
+        (document.addEventListener "touchend" start)
+        (document.addEventListener "mouseup" start)
+
+        (window.addEventListener "resize" setWindowSize)
+
+        (setInterval timerTick 1)
+
+    </script>
+</head>
+<body onload="loosp2js(false)" style="background-color:black;padding:0;margin:0;">
+    <canvas id="board" style="margin:0 auto"></canvas>
+</body>
+</html>

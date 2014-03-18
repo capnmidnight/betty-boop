@@ -7,14 +7,28 @@ var loosp2js = (function () {
         else {
             var arr = document.querySelectorAll("script[type='text/loosp']");
             for (var i = 0; i < arr.length; ++i) {
-                var script = arr[i].innerHTML;
-                script = loosp2js(showScript, script);
-                if(showScript)
-                    console.log(script);
-                var elm = document.createElement("script");
-                elm.type = "text/javascript";
-                elm.src = "data:text/javascript;base64," + btoa(script);
-                document.head.appendChild(elm);
+                var script = "";
+                if ("src" in arr[i]
+                    && arr[i].src
+                    && arr[i].src.length > 0) {
+                    var request = new XMLHttpRequest();
+                    request.open("GET", arr[i].src, false);
+                    request.send();
+                    console.log(request);
+                    script = request.responseText;
+                }
+                else {
+                    script = arr[i].innerHTML;
+                }
+                if (script) {
+                    script = loosp2js(showScript, script);
+                    if (showScript)
+                        console.log(script);
+                    var elm = document.createElement("script");
+                    elm.type = "text/javascript";
+                    elm.src = "data:text/javascript;base64," + btoa(script);
+                    document.head.appendChild(elm);
+                }
             }
         }
     }
@@ -25,10 +39,10 @@ var loosp2js = (function () {
         for (var formName in grammar)
             program[formName] = [];
         for (var formName in grammar)
-            if(good)
+            if (good)
                 good = processForm(program, grammar[formName]);
         for (var formName in postProcess)
-            if(good)
+            if (good)
                 good = processForm(program, postProcess[formName]);
         return good ? program.script[0] : "console.error(\"Translation cancelled\");";
     }
@@ -51,15 +65,15 @@ var loosp2js = (function () {
             } while (expr != program[form.on][i])
         }
 
-        if(form.validate){
-            for(var i = 0; i < program[form.on].length; ++i){
-                program[form.on][i] = program[form.on][i].replace(form.validate, function(match){
+        if (form.validate) {
+            for (var i = 0; i < program[form.on].length; ++i) {
+                program[form.on][i] = program[form.on][i].replace(form.validate, function (match) {
                     good = false;
                     return "\n<err>>>> " + match + " <<<<err>\n";
                 });
             }
-            if(!good){
-                for(var i = 0; i < program.sexpr.length; ++i)
+            if (!good) {
+                for (var i = 0; i < program.sexpr.length; ++i)
                     program.sexpr[i] = "(" + program.sexpr[i] + ")";
                 processForm(program, postProcess.compile);
                 console.error("Error: %s in: %s", form.errorMessage, program.script[0]);
@@ -79,7 +93,7 @@ var loosp2js = (function () {
 
     var grammar = {
 
-        comments:{
+        comments: {
             on: "script",
             pattern: /(\/\/[^\n]*\n|\/\*(.|\n)*\*\/)/g,
             translate: function (program, tokens, match) {
@@ -93,7 +107,7 @@ var loosp2js = (function () {
             on: "script",
             pattern: /("[^"]*"|\b\d+\.\d+\b|\b\d+\b)/g,
             translate: function (program, tokens, match) {
-                if(match[0] == "\"")
+                if (match[0] == "\"")
                     match = match.replace(/\n/g, "\\n\"\n+\"");
                 return makeExpr(program, "literal", match);
             },
@@ -108,12 +122,24 @@ var loosp2js = (function () {
                 return makeExpr(program, "array",
                     "[" + match.substring(1, match.length - 1)
                         .split(/\s+/)
-                        .map(function(s){return s.trim();})
-                        .filter(function (s){return s.length > 0;})
+                        .map(function (s) { return s.trim(); })
+                        .filter(function (s) { return s.length > 0; })
                         .join(",") + "]");
             },
             validate: /(\[|\])/g,
             errorMessage: "unterminated array literal"
+        },
+
+        objectLiteral: {
+            on: "script",
+            pattern: /{([^{}]*)}/g,
+            translate: function (program, tokens, match, capture1) {
+                capture1 = capture1.replace(/\s*:\s*/g, ":");
+                var pairs = capture1.split(/\s/);
+                return makeExpr(program, "objectLiteral", "{" + pairs.join(',') + "}");
+            },
+            validate: /({|})/g,
+            errorMessage: "unterminated object literal"
         },
 
         sexpr: {
@@ -370,7 +396,7 @@ var loosp2js = (function () {
             if (tail)
                 tokens.push("return " + tail);
         }
-        else{
+        else {
             // figure out super types
             if (name != "LoospObject") {
                 if (name.indexOf(":") > -1) {
@@ -394,24 +420,24 @@ var loosp2js = (function () {
 
             // move method definitions out of class body
             var exprs = [], methods = [];
-            tokens.forEach(function(exprID){
+            tokens.forEach(function (exprID) {
                 var expr = postProcess.compile.translate(program, null, exprID);
-                if(expr.search(/^method /) > -1)
+                if (expr.search(/^method /) > -1)
                     methods.push(name + "." + exprID);
                 else
                     exprs.push(exprID);
             });
             tokens = exprs;
-            super2 += methods.join(";\n ") +";\n ";
+            super2 += methods.join(";\n ") + ";\n ";
         }
         var prefix = "";
         if (type == "method")
             prefix = "prototype." + name + " = ";
 
         //ellipsis
-        if(args.length > 0){
+        if (args.length > 0) {
             matches = args[args.length - 1].match(/(\S+)\.\.\./);
-            if(matches){
+            if (matches) {
                 args.pop();
                 var argName = matches[1];
                 super1 += "var " + argName + " = Array.prototype.slice.call(arguments);\n " + argName + ".splice(0, " + args.length + ");\n";
