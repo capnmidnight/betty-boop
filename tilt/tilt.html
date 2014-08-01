@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="viewport" content="user-scalable=no, width=device-width">
+	<script type="text/javascript">
+function load()
+{
+	var ball = document.getElementById("ball");
+	var ballx = 0;
+	var bally = 0;
+	var balldx = 0;
+	var balldy = 0;
+	var out1 = document.getElementById("out1");
+	document.addEventListener("touchmove", function(event)
+	{
+		event.preventDefault();
+	});
+	window.addEventListener("deviceorientation", function(event)
+	{
+		balldx = -event.beta;
+		balldy = event.gamma;
+	});
+
+	function draw()
+	{
+		ballx += balldx;
+		bally += balldy;
+		if(ballx < 0) ballx = 0;
+		if(ballx >= screen.width - ball.width) ballx = screen.width - ball.width;
+		if(bally < 0) bally = 0;
+		if(bally >= screen.height - ball.height) bally = screen.height - ball.height;
+		ball.style.left = Math.floor(ballx) + "px";
+		ball.style.top = Math.floor(bally) + "px";
+		setTimeout(draw, 33);
+	}
+	draw();
+}
+		</script>
+		<style type="text/css">
+body
+{
+	padding:0;
+	margin:0;
+	background-color:#000000;
+}
+
+#ball
+{
+	position: absolute;
+	left: 400px;
+	top: 100px;
+}
+
+.output
+{
+	position: relative;
+	float: left;
+	color: #ffffff;
+}
+		</style>
+	</head>
+	<body onload="load()">
+		<div id="out1" class="output"></div>
+		<div id="out2" class="output"></div>
+		<div id="out3" class="output"></div>
+		<img src="bulb.png" id="ball">
+	</body>
+</html>

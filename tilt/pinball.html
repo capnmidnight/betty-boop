@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="viewport" content="user-scalable=no, width=device-width">
+	<script type="text/javascript">
+function load()
+{
+	var scope = document.getElementById("scope");
+	scope.width = window.innerWidth;
+	scope.height = window.innerHeight;
+	scope.style.width = scope.width + "px";
+	scope.style.height = scope.height + "px";
+
+	var graph = scope.getContext("2d");
+	graph.fillStyle = "#ffffff";
+	graph.fillRect(0, 0, scope.width, scope.height);
+
+	var offset, scale, sample, lastSample, dSample, lastDSample, wait;
+
+	scale = 50;
+    offset = window.innerHeight / 2;
+    wait = 0;
+
+	document.addEventListener("touchmove", function(event)
+	{
+		event.preventDefault();
+	});
+
+	window.addEventListener("devicemotion", function(event)
+	{
+        sample = event.acceleration.x;
+        dSample = sample - lastSample;
+        lastSample = sample;
+        
+        if(wait == 0)
+        {
+            wait = 5;
+        
+            if(dSample * 50 > 10)
+            {
+                graph.fillStyle = "#ffff00";
+            }
+            else if(dSample * 50 < -10)
+            {
+                graph.fillStyle = "#ff00ff";
+            }
+            else
+            {
+                graph.fillStyle = "#00ffff";
+                wait = 0;
+            }
+        }
+        else
+        {
+            wait--;
+        }
+        
+        graph.drawImage(scope, -2, 0);
+        graph.fillRect(scope.width - 2, 0, 2, scope.height);
+        point2point(lastDSample, sample, scale, offset, "#00ff00");
+        lastDSample = dSample;
+	});
+    
+	function point2point(a, b, s, o, c)
+	{
+		graph.beginPath();
+		graph.strokeStyle = c;
+		graph.moveTo(scope.width - 2, a * s + o);
+		graph.lineTo(scope.width, b * s + o);
+		graph.stroke();
+	}
+}
+		</script>
+		<style type="text/css">
+body
+{
+	padding:0;
+	margin:0;
+	background-color:#000000;
+}
+		</style>
+	</head>
+	<body onload="load()">
+		<canvas id="scope">
+	</body>
+</html>
